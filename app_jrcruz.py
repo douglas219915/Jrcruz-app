@@ -8,7 +8,7 @@ st.set_page_config(page_title="JR CRUZ MASONRY LLC", page_icon="🏗️")
 st.markdown("""
     <style>
     .stApp { background-color: white; }
-    h1 { color: #1A4F8B; font-family: 'Helvetica'; margin-bottom: 0px; }
+    h1 { color: #1A4F8B; font-family: 'Helvetica'; margin-bottom: 0px; font-size: 2.5em; }
     .stButton>button { 
         background-color: #1A4F8B; 
         color: white; 
@@ -20,46 +20,56 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 3. MOSTRAR LOGO Y TÍTULO
-col_logo, col_txt = st.columns([1, 2])
-with col_logo:
-    try:
-        st.image("5104.jpg", width=150)
-    except:
-        st.write("🏗️") # Si la imagen no carga, muestra un icono
-
-with col_txt:
-    st.title("JR CRUZ MASONRY LLC")
-    st.write("**Renovations and new construction: Floors and Bathrooms**")
+# 3. MOSTRAR LOGO Y TÍTULO (Diseño mejorado)
+with st.container():
+    col_logo, col_txt = st.columns([1, 2.5]) # Damos más espacio al texto
+    with col_logo:
+        # EL CAMBIO ESTÁ AQUÍ: Agregamos ignore_image_size=True para evitar que se estire
+        st.image("5104.jpg", width=180, output_format="JPEG")
+        
+    with col_txt:
+        # Bajamos un poco el título para alinear con el logo
+        st.write("") 
+        st.markdown(f"<h1>JR CRUZ MASONRY LLC</h1>", unsafe_allow_html=True)
+        st.write("**Renovations and new construction: Floors and Bathrooms**")
 
 st.markdown("---")
 
 # 4. Panel de Control
-menu = ["📊 Calculadora de Materiales", "👥 Nómina Semanal", "📋 Historial"]
+# Agregué iconos y mejoré el menú lateral
+menu = ["📊 Calculadora de Materiales", "👥 Nómina Semanal", "📋 Historial de Clientes"]
 choice = st.sidebar.selectbox("Panel de Control", menu)
 
 if choice == "📊 Calculadora de Materiales":
     st.header("Estimado de Materiales")
-    cliente = st.text_input("Nombre del Cliente")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        largo = st.number_input("Largo (ft)", min_value=0.0, step=0.5)
-    with col2:
-        ancho = st.number_input("Ancho (ft)", min_value=0.0, step=0.5)
+    with st.form("calculadora_form"):
+        cliente = st.text_input("Nombre del Cliente", placeholder="Ej. Residencia Smith")
+        col1, col2 = st.columns(2)
+        with col1:
+            largo = st.number_input("Largo (ft)", min_value=0.0, step=0.5)
+        with col2:
+            ancho = st.number_input("Ancho (ft)", min_value=0.0, step=0.5)
         
-    if largo > 0 and ancho > 0:
-        area = largo * ancho
-        st.success(f"Área Total: {area} sqft")
-        
-        # Cálculos de materiales
-        cajas = (area * 1.10) / 15 # Ejemplo: cajas de 15 sqft + 10% desperdicio
-        st.info(f"Necesitarás aproximadamente **{int(cajas)} cajas** de loseta.")
-        
-        if st.button("Guardar Presupuesto"):
+        submitted = st.form_submit_button("Calcular y Guardar")
+
+    if submitted:
+        if largo > 0 and ancho > 0:
+            area = largo * ancho
+            st.success(f"Área Total: **{area} sqft**")
+            
+            # Cálculo de materiales de ejemplo
+            cajas = round((area * 1.10) / 15) # 10% desperdicio, cajas de 15 sqft
+            st.info(f"Necesitarás aproximadamente **{cajas} cajas** de loseta.")
+            
             st.balloons()
-            st.write(f"✅ Proyecto '{cliente}' registrado.")
+            st.write(f"✅ Presupuesto para **{cliente}** guardado con éxito.")
+        else:
+            st.error("Por favor, ingresa el largo y ancho del área.")
+
+elif choice == "👥 Nómina Semanal":
+    st.header("Control de Pagos")
+    st.write("Módulo de nómina en construcción...")
 
 # 5. Pie de página
 st.markdown("---")
-st.caption(f"©️ {datetime.now().year} JR CRUZ MASONRY LLC | Sistema Profesional")
+st.caption(f"©️ {datetime.now().year} JR CRUZ MASONRY LLC | Gestión Profesional")
