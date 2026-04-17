@@ -1,50 +1,62 @@
 import streamlit as st
 from datetime import datetime
 
-# 1. Configuración de la página
-st.set_page_config(page_title="JR CRUZ MASONRY LLC", page_icon="🏗️")
+# 1. Configuración de página
+st.set_page_config(page_title="JR CRUZ MASONRY LLC", page_icon="🏗️", layout="centered")
 
-# 2. Estilo personalizado (Azul Marino y Blanco)
+# 2. Diseño y Colores (Azul Marino y Blanco)
 st.markdown("""
     <style>
-    .main { background-color: #FFFFFF; }
+    .stApp { background-color: white; }
+    h1 { color: #1A4F8B; font-family: 'Arial'; border-bottom: 3px solid #000000; }
     .stButton>button { 
         background-color: #1A4F8B; 
         color: white; 
-        border-radius: 10px;
-        border: 2px solid #000000;
+        width: 100%; 
+        border-radius: 5px;
+        height: 3em;
+        font-weight: bold;
     }
-    h1 { color: #1A4F8B; border-bottom: 2px solid #000000; }
+    .sidebar .sidebar-content { background-color: #1A4F8B; color: white; }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. Título y Eslogan
+# 3. Encabezado con Imagen (Usaremos el nombre por ahora mientras vinculas tu imagen real)
 st.title("🏗️ JR CRUZ MASONRY LLC")
-st.write("### *Renovations and new construction: Floors and Bathrooms*")
+st.markdown("### *Renovations and new construction: Floors and Bathrooms*")
 
-# 4. Menú Lateral
-st.sidebar.header("Menú de Control")
-opcion = st.sidebar.selectbox("¿Qué desea hacer?", ["Nuevo Presupuesto", "Nómina", "Inventario"])
+# 4. Navegación
+menu = ["📊 Calculadora de Materiales", "👥 Nómina Semanal", "📋 Historial de Clientes"]
+choice = st.sidebar.selectbox("Panel de Control", menu)
 
-if opcion == "Nuevo Presupuesto":
-    st.subheader("📊 Calculadora de Materiales")
-    cliente = st.text_input("Nombre del Cliente")
-    col1, col2 = st.columns(2)
-    with col1:
-        largo = st.number_input("Largo (ft)", min_value=0.0)
-    with col2:
-        ancho = st.number_input("Ancho (ft)", min_value=0.0)
+if choice == "📊 Calculadora de Materiales":
+    st.header("Estimado de Materiales")
     
+    with st.container():
+        cliente = st.text_input("Nombre del Cliente", placeholder="Ej. Residencia Smith")
+        col1, col2 = st.columns(2)
+        with col1:
+            largo = st.number_input("Largo del piso (ft)", min_value=0.0, step=1.0)
+        with col2:
+            ancho = st.number_input("Ancho del piso (ft)", min_value=0.0, step=1.0)
+            
     if largo > 0 and ancho > 0:
         area = largo * ancho
-        st.info(f"El área total es de: {area} sqft")
-        if st.button("Guardar Cotización"):
-            st.success(f"Cotización para {cliente} guardada con éxito.")
+        st.success(f"Área Total: **{area} sqft**")
+        
+        # Cálculos rápidos de ejemplo
+        bultos_thinset = round(area / 60) # Aproximación estándar
+        st.info(f"📦 Material sugerido: **{bultos_thinset} bultos de Thinset** (aprox).")
+        
+        if st.button("Generar Presupuesto"):
+            st.balloons()
+            st.write(f"✅ Presupuesto para {cliente} listo para enviar.")
 
-elif opcion == "Nómina":
-    st.subheader("👥 Registro de Empleados")
-    st.write("Módulo de pagos en construcción...")
+elif choice == "👥 Nómina Semanal":
+    st.header("Control de Pagos")
+    st.write("Aquí podrás marcar las horas de tus muchachos.")
+    # Próximamente agregaremos la tabla de horas aquí
 
 # Pie de página
-st.write("---")
-st.caption(f"©️ {datetime.now().year} JR CRUZ MASONRY LLC | Gestión Profesional")
+st.markdown("---")
+st.caption(f"©️ {datetime.now().year} JR CRUZ MASONRY LLC | Sistema de Gestión Profesional")
