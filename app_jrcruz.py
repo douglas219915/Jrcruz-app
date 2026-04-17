@@ -1,26 +1,50 @@
-import math
+import streamlit as st
 from datetime import datetime
 
-# --- CONFIGURACIÓN JR CRUZ MASONRY LLC ---
-NOMBRE_EMPRESA = "JR CRUZ MASONRY LLC"
-COLOR_PRIMARIO = "#1A4F8B" # Azul Marino del logo
+# 1. Configuración de la página
+st.set_page_config(page_title="JR CRUZ MASONRY LLC", page_icon="🏗️")
 
-def calcular_materiales(largo, ancho, sqft_caja):
-    area = largo * ancho
-    area_con_extra = area * 1.10
-    cajas = math.ceil(area_con_extra / sqft_caja)
-    return area, cajas
+# 2. Estilo personalizado (Azul Marino y Blanco)
+st.markdown("""
+    <style>
+    .main { background-color: #FFFFFF; }
+    .stButton>button { 
+        background-color: #1A4F8B; 
+        color: white; 
+        border-radius: 10px;
+        border: 2px solid #000000;
+    }
+    h1 { color: #1A4F8B; border-bottom: 2px solid #000000; }
+    </style>
+    """, unsafe_allow_html=True)
 
-def login():
-    print(f"🏛️ BIENVENIDO A LA APP DE {NOMBRE_EMPRESA}")
-    user = input("Usuario: ")
-    if user == "juancruz21":
-        print("✅ Acceso concedido")
-        return True
-    return False
+# 3. Título y Eslogan
+st.title("🏗️ JR CRUZ MASONRY LLC")
+st.write("### *Renovations and new construction: Floors and Bathrooms*")
 
-# --- CUERPO PRINCIPAL ---
-if __name__ == "__main__":
-    if login():
-        # Aquí irá el menú que elijas (WhatsApp, Nómina o Inventario)
-        print("Sistema listo. ¿Qué desea hacer hoy, Jefe?")
+# 4. Menú Lateral
+st.sidebar.header("Menú de Control")
+opcion = st.sidebar.selectbox("¿Qué desea hacer?", ["Nuevo Presupuesto", "Nómina", "Inventario"])
+
+if opcion == "Nuevo Presupuesto":
+    st.subheader("📊 Calculadora de Materiales")
+    cliente = st.text_input("Nombre del Cliente")
+    col1, col2 = st.columns(2)
+    with col1:
+        largo = st.number_input("Largo (ft)", min_value=0.0)
+    with col2:
+        ancho = st.number_input("Ancho (ft)", min_value=0.0)
+    
+    if largo > 0 and ancho > 0:
+        area = largo * ancho
+        st.info(f"El área total es de: {area} sqft")
+        if st.button("Guardar Cotización"):
+            st.success(f"Cotización para {cliente} guardada con éxito.")
+
+elif opcion == "Nómina":
+    st.subheader("👥 Registro de Empleados")
+    st.write("Módulo de pagos en construcción...")
+
+# Pie de página
+st.write("---")
+st.caption(f"©️ {datetime.now().year} JR CRUZ MASONRY LLC | Gestión Profesional")
