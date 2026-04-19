@@ -14,7 +14,7 @@ def get_base64(file):
             return base64.b64encode(f.read()).decode()
     except: return None
 
-# --- ESTILOS VISUALES (FORZAR TAMAÑO DE IMÁGENES) ---
+# --- ESTILOS VISUALES ---
 logo_b64 = get_base64("5104.jpg")
 st.markdown(f"""
     <style>
@@ -25,7 +25,6 @@ st.markdown(f"""
     }}
     .stButton>button {{ width: 100%; background-color: #1A4F8B; color: white; border-radius: 8px; font-weight: bold; height: 45px; }}
     h1, h2, h3 {{ color: #1A4F8B; }}
-    /* ESTO HACE QUE TODAS LAS IMÁGENES DEL CATÁLOGO MIDAN LO MISMO */
     [data-testid="stImage"] img {{
         width: 100% !important;
         height: 300px !important;
@@ -36,7 +35,7 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# --- TRADUCCIONES COMPLETAS ---
+# --- TRADUCCIONES ---
 idioma = st.sidebar.radio("🌐 Language / Idioma", ["Español", "English"])
 texts = {
     "Español": {
@@ -65,8 +64,7 @@ texts = {
 t = texts[idioma]
 choice = st.sidebar.selectbox("Panel", t["menu"])
 
-# --- LÓGICA DE MÓDULOS (NUEVO ESTIMADO, HISTORIAL, CITAS, NÓMINA) ---
-# [Se mantiene igual que la versión anterior para no romper la funcionalidad de pagos y celdas]
+# --- MODULO 1: NUEVO ESTIMADO (SIN CAMBIOS) ---
 if "📝" in choice:
     st.title(t["menu"][0])
     c1, c2 = st.columns(2)
@@ -102,13 +100,14 @@ if "📝" in choice:
     balance = total_contrato - total_pagado
     if st.button(t["btn_save"]):
         deps_str = ";".join(map(str, lista_deps))
-        df = pd.DataFrame([[str(fec), cliente, total_contrato, deps_str, total_pagado, balance]], 
+        df = pd.DataFrame([[str(fec), cliente, float(total_contrato), str(deps_str), float(total_pagado), float(balance)]], 
                           columns=["Fecha", "Cliente", "Total", "Depositos", "Pagado", "Balance"])
         file = "historial_final.csv"
         if not os.path.exists(file): df.to_csv(file, index=False)
         else: df.to_csv(file, mode='a', header=False, index=False)
         st.success(t["exito"])
 
+# --- MODULO 2: HISTORIAL Y EDICIÓN (CORREGIDO PARA EVITAR TYPEERROR) ---
 elif "📋" in choice:
     st.title(t["menu"][1])
     file = "historial_final.csv"
@@ -117,34 +116,43 @@ elif "📋" in choice:
         st.dataframe(df_h, use_container_width=True)
         st.markdown("---")
         sel_c = st.selectbox(t["seleccione"], [""] + list(df_h["Cliente"].unique()))
+        
         if sel_c != "":
+            # Localizar fila
             idx = df_h[df_h["Cliente"] == sel_c].index[-1]
-            datos = df_h.loc[idx]
-            deps_actuales = [float(d) for d in str(datos["Depositos"]).split(";") if d]
+            # Convertir valores a tipos correctos para evitar errores de pandas
+            total_val = float(df_h.loc[idx, "Total"])
+            deps_actuales = [float(d) for d in str(df_h.loc[idx, "Depositos"]).split(";") if d]
+            
             if 'edit_count' not in st.session_state: st.session_state['edit_count'] = len(deps_actuales)
             if st.button(t["agregar_celda"]): st.session_state['edit_count'] += 1
+            
             nuevos_deps = []
             for i in range(st.session_state['edit_count']):
                 val_default = deps_actuales[i] if i < len(deps_actuales) else 0.0
-                v = st.number_input(f"{t['dep']} {i+1}", value=val_default, key=f"edit_dep_{i}")
+                v = st.number_input(f"{t['dep']} {i+1}", value=float(val_default), key=f"edit_dep_{i}")
                 nuevos_deps.append(v)
+            
             n_pagado = sum(nuevos_deps)
-            n_balance = datos["Total"] - n_pagado
+            n_balance = total_val - n_pagado
+            
             if st.button(t["btn_edit"]):
-                df_h.at[idx, "Depositos"] = ";".join(map(str, nuevos_deps))
-                df_h.at[idx, "Pagado"] = n_pagado
-                df_h.at[idx, "Balance"] = n_balance
+                # Actualización directa para evitar conflictos de tipo de dato
+                df_h.loc[idx, "Depositos"] = ";".join(map(str, nuevos_deps))
+                df_h.loc[idx, "Pagado"] = float(n_pagado)
+                df_h.loc[idx, "Balance"] = float(n_balance)
                 df_h.to_csv(file, index=False)
                 st.success(t["cambios"])
                 st.rerun()
+
             if st.button(t["btn_pdf"]):
                 pdf = FPDF()
                 pdf.add_page()
                 if os.path.exists("5104.jpg"): pdf.image("5104.jpg", 10, 8, 30)
                 pdf.set_font("Arial", "B", 16); pdf.cell(0, 10, "JR CRUZ MASONRY LLC", 0, 1, "C"); pdf.ln(10)
                 pdf.set_font("Arial", "B", 12); pdf.cell(0, 10, f"{t['cliente'].upper()}: {sel_c}", 0, 1)
-                pdf.cell(0, 10, f"{t['fecha'].upper()}: {datos['Fecha']}", 0, 1); pdf.ln(5)
-                pdf.cell(100, 10, t["total_c"], 1); pdf.cell(90, 10, f"${datos['Total']}", 1, 1, "R")
+                pdf.cell(0, 10, f"{t['fecha'].upper()}: {df_h.loc[idx, 'Fecha']}", 0, 1); pdf.ln(5)
+                pdf.cell(100, 10, t["total_c"], 1); pdf.cell(90, 10, f"${total_val}", 1, 1, "R")
                 for i, d in enumerate(nuevos_deps):
                     pdf.cell(100, 10, f"{t['dep']} {i+1}", 1); pdf.cell(90, 10, f"${d}", 1, 1, "R")
                 pdf.cell(100, 10, t["total_p"], 1); pdf.cell(90, 10, f"${n_pagado}", 1, 1, "R")
@@ -154,6 +162,7 @@ elif "📋" in choice:
                 pdf.output(out)
                 with open(out, "rb") as f: st.download_button(f"📩 {t['btn_pdf']}", f, file_name=out)
 
+# --- MODULOS RESTANTES (SIN CAMBIOS) ---
 elif "📅" in choice:
     st.title(t["m_citas"])
     with st.form("citas"):
@@ -175,10 +184,8 @@ elif "👥" in choice:
             st.success(f"{t['exito']} ${tp}")
     if os.path.exists("payroll.csv"): st.dataframe(pd.read_csv("payroll.csv"))
 
-# --- MÓDULO CATÁLOGO (IMÁGENES CORREGIDAS) ---
 elif "🛒" in choice:
     st.title(t["menu"][4])
-    # Lista completa
     items = [
         ("Tile", "https://www.flooranddecor.com/tile", "tile.jpg.png"), 
         ("Stone", "https://www.flooranddecor.com/stone", "stone.jpg.png"), 
@@ -189,15 +196,13 @@ elif "🛒" in choice:
         ("Fixtures", "https://www.flooranddecor.com/bathroom-fixtures", "fixtures.jpg.png"),
         ("Materials", "https://www.flooranddecor.com/installation-materials", "materials.jpg.jpeg")
     ]
-    
     for i in range(0, len(items), 2):
         cols = st.columns(2)
         for j in range(2):
             if i+j < len(items):
                 name, link, img_path = items[i+j]
                 with cols[j]:
-                    if os.path.exists(img_path):
-                        st.image(img_path, use_container_width=True)
+                    if os.path.exists(img_path): st.image(img_path, use_container_width=True)
                     st.subheader(name)
                     st.link_button(t["ver_mas"], link)
 
