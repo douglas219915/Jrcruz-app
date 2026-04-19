@@ -48,14 +48,14 @@ texts = {
         "cat_title": "Productos Sugeridos (Ambientes Reales)",
         "view_btn": "Ver en Floor & Decor",
         "categories": [
-            ("Tile (Loseta)", "https://www.flooranddecor.com/tile", "tile.jpg"),
-            ("Stone (Piedra/Marble)", "https://www.flooranddecor.com/stone", "stone.jpg"),
-            ("Wood (Madera)", "https://www.flooranddecor.com/hardwood", "wood.jpg"),
-            ("Laminate (Laminado)", "https://www.flooranddecor.com/laminate", "laminate.jpg"),
-            ("Vinyl (Vinilo)", "https://www.flooranddecor.com/vinyl", "vinyl.jpg"),
-            ("Decoratives (Backsplash)", "https://www.flooranddecor.com/decorative-tile", "decoratives.jpg"),
-            ("Fixtures (Baño y Gabinetes)", "https://www.flooranddecor.com/bathroom-fixtures", "fixtures.jpg"),
-            ("Materials (Grout/Pegamento)", "https://www.flooranddecor.com/installation-materials", "materials.jpg")
+            ("Tile (Loseta)", "https://www.flooranddecor.com/tile", "tile.jpg.png"),
+            ("Stone (Piedra/Marble)", "https://www.flooranddecor.com/stone", "stone.jpg.png"),
+            ("Wood (Madera)", "https://www.flooranddecor.com/hardwood", "wood.jpg.png"),
+            ("Laminate (Laminado)", "https://www.flooranddecor.com/laminate", "laminate.jpg.JPG"),
+            ("Vinyl (Vinilo)", "https://www.flooranddecor.com/vinyl", "vinyl.jpg.JPG"),
+            ("Decoratives (Backsplash)", "https://www.flooranddecor.com/decorative-tile", "decoratives.jpg.jpeg"),
+            ("Fixtures (Baño y Gabinetes)", "https://www.flooranddecor.com/bathroom-fixtures", "fixtures.jpg.png"),
+            ("Materials (Grout/Pegamento)", "https://www.flooranddecor.com/installation-materials", "materials.jpg.jpeg")
         ]
     },
     "English": {
