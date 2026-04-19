@@ -35,64 +35,38 @@ if logo_b64:
         </style>
     """, unsafe_allow_html=True)
 
-# --- TRADUCCIONES ---
+# --- DICCIONARIO DE TRADUCCIÓN COMPLETO ---
 idioma = st.sidebar.radio("🌐 Language / Idioma", ["Español", "English"])
 texts = {
     "Español": {
         "menu": ["📝 Estimado y Pagos", "📅 Citas", "👥 Nómina", "📋 Historial", "🛒 Catálogo"],
         "calc_t": "Estimado y Control de Pagos",
         "btn_pdf": "Generar PDF en Español",
-        "materiales_t": "Desglose de Trabajo y Materiales",
-        "mano_obra": "Mano de Obra (Labor)",
-        "desc": "Descripción", "costo": "Costo ($)",
-        "pago_t": "Registro de Pagos",
-        "deposito": "Depósito / Adelanto ($)",
-        "otros_pagos": "Otros Abonos / Pagos ($)",
-        "balance": "Balance Pendiente",
-        "total_p": "Total Pagado",
-        "total_c": "Total Contrato",
-        "status_p": "PAGADO POR COMPLETO",
-        "status_pen": "BALANCE PENDIENTE",
-        "pdf_desc": "Descripción", "pdf_cant": "Monto",
-        "cat_t": "Catálogo Floor & Decor", "ver_mas": "Ver detalles",
-        "cat_list": [
-            ("Loseta (Tile)", "https://www.flooranddecor.com/tile", "tile.jpg.png"),
-            ("Piedra (Stone)", "https://www.flooranddecor.com/stone", "stone.jpg.png"),
-            ("Madera (Wood)", "https://www.flooranddecor.com/hardwood", "wood.jpg.png"),
-            ("Laminado (Laminate)", "https://www.flooranddecor.com/laminate", "laminate.jpg.JPG"),
-            ("Vinilo (Vinyl)", "https://www.flooranddecor.com/vinyl", "vinyl.jpg.JPG"),
-            ("Decorativos (Backsplash)", "https://www.flooranddecor.com/decoratives", "decoratives.jpg.jpeg"),
-            ("Baños y Gabinetes (Fixtures)", "https://www.flooranddecor.com/bathroom-fixtures", "fixtures.jpg.png"),
-            ("Materiales (Grout/Cement)", "https://www.flooranddecor.com/installation-materials", "materials.jpg.jpeg")
-        ]
+        "step1": "1. Áreas y Medidas (Sqft)",
+        "step2": "2. Desglose de Trabajo y Materiales",
+        "step3": "3. Registro de Pagos (Depósitos)",
+        "cliente": "Cliente", "fecha": "Fecha", "desc": "Descripción",
+        "largo": "Largo (ft)", "ancho": "Ancho (ft)", "total_area": "Área Total",
+        "mano_obra": "Mano de Obra", "costo": "Costo ($)", "item": "Artículo",
+        "dep1": "Depósito 1 ($)", "dep2": "Depósito 2 ($)", "dep3": "Depósito 3 ($)",
+        "total_c": "Total Contrato", "total_p": "Total Pagado", "balance": "Balance Pendiente",
+        "status_p": "PAGADO POR COMPLETO", "status_pen": "BALANCE PENDIENTE",
+        "cat_t": "Catálogo Floor & Decor", "ver_mas": "Ver detalles"
     },
     "English": {
         "menu": ["📝 Estimate & Payments", "📅 Appointments", "👥 Payroll", "📋 History", "🛒 Catalog"],
         "calc_t": "Estimate & Payment Control",
         "btn_pdf": "Generate PDF in English",
-        "materiales_t": "Labor & Materials Breakdown",
-        "mano_obra": "Labor Cost",
-        "desc": "Description", "costo": "Cost ($)",
-        "pago_t": "Payment Record",
-        "deposito": "Deposit / Down Payment ($)",
-        "otros_pagos": "Additional Payments ($)",
-        "balance": "Balance Due",
-        "total_p": "Total Paid",
-        "total_c": "Total Contract",
-        "status_p": "PAID IN FULL",
-        "status_pen": "PENDING BALANCE",
-        "pdf_desc": "Description", "pdf_cant": "Amount",
-        "cat_t": "Floor & Decor Catalog", "ver_mas": "View details",
-        "cat_list": [
-            ("Tile", "https://www.flooranddecor.com/tile", "tile.jpg.png"),
-            ("Stone", "https://www.flooranddecor.com/stone", "stone.jpg.png"),
-            ("Wood", "https://www.flooranddecor.com/hardwood", "wood.jpg.png"),
-            ("Laminate", "https://www.flooranddecor.com/laminate", "laminate.jpg.JPG"),
-            ("Vinyl", "https://www.flooranddecor.com/vinyl", "vinyl.jpg.JPG"),
-            ("Decoratives", "https://www.flooranddecor.com/decoratives", "decoratives.jpg.jpeg"),
-            ("Fixtures", "https://www.flooranddecor.com/bathroom-fixtures", "fixtures.jpg.png"),
-            ("Materials", "https://www.flooranddecor.com/installation-materials", "materials.jpg.jpeg")
-        ]
+        "step1": "1. Areas & Measurements (Sqft)",
+        "step2": "2. Labor & Materials Breakdown",
+        "step3": "3. Payment Record (Deposits)",
+        "cliente": "Client", "fecha": "Date", "desc": "Description",
+        "largo": "Length (ft)", "ancho": "Width (ft)", "total_area": "Total Area",
+        "mano_obra": "Labor Cost", "costo": "Cost ($)", "item": "Item",
+        "dep1": "Deposit 1 ($)", "dep2": "Deposit 2 ($)", "dep3": "Deposit 3 ($)",
+        "total_c": "Total Contract", "total_p": "Total Paid", "balance": "Balance Due",
+        "status_p": "PAID IN FULL", "status_pen": "PENDING BALANCE",
+        "cat_t": "Floor & Decor Catalog", "ver_mas": "View details"
     }
 }
 t = texts[idioma]
@@ -104,46 +78,42 @@ def guardar_datos(df, filename):
 # --- NAVEGACIÓN ---
 choice = st.sidebar.selectbox("Panel", t["menu"])
 
-# --- MODULO 1: ESTIMADO Y PAGOS ---
 if "📝" in choice:
     st.title(t["calc_t"])
     col_c1, col_c2 = st.columns(2)
-    with col_c1: cliente = st.text_input("Cliente / Client")
-    with col_c2: fecha = st.date_input("Fecha / Date")
+    with col_c1: cliente = st.text_input(t["cliente"])
+    with col_c2: fecha_input = st.date_input(t["fecha"])
 
     st.markdown("---")
-    st.subheader("1. Áreas y Medidas (Sqft)")
+    st.subheader(t["step1"])
     if 'rows' not in st.session_state: st.session_state['rows'] = 1
     
     cb1, cb2 = st.columns(2)
     with cb1:
-        if st.button("+ Area"): st.session_state['rows'] += 1
+        if st.button(f"+ {t['desc']}"): st.session_state['rows'] += 1
     with cb2:
-        if st.button("- Area") and st.session_state['rows'] > 1: st.session_state['rows'] -= 1
+        if st.button(f"- {t['desc']}") and st.session_state['rows'] > 1: st.session_state['rows'] -= 1
 
     total_sqft = 0.0
-    medidas = []
     for i in range(st.session_state['rows']):
         c1, c2, c3 = st.columns([2, 1, 1])
         n_a = c1.text_input(f"{t['desc']} {i+1}", key=f"n_{i}")
-        l = c2.number_input(f"L (ft)", min_value=0.0, key=f"l_{i}")
-        a = c3.number_input(f"W (ft)", min_value=0.0, key=f"a_{i}")
-        sub = round(l * a, 2)
-        total_sqft += sub
-        medidas.append([n_a, l, a, sub])
+        l = c2.number_input(t["largo"], min_value=0.0, key=f"l_{i}")
+        a = c3.number_input(t["ancho"], min_value=0.0, key=f"a_{i}")
+        total_sqft += round(l * a, 2)
 
     st.markdown("---")
-    st.subheader(f"2. {t['materiales_t']}")
-    mano_obra = st.number_input(f"{t['mano_obra']}", min_value=0.0)
+    st.subheader(t["step2"])
+    mano_obra = st.number_input(t["mano_obra"], min_value=0.0)
     
     if 'm_rows' not in st.session_state: st.session_state['m_rows'] = 1
-    if st.button("+ Item"): st.session_state['m_rows'] += 1
+    if st.button(f"+ {t['item']}"): st.session_state['m_rows'] += 1
     
     lista_mat = []
     total_mat = 0.0
     for j in range(st.session_state['m_rows']):
         cm1, cm2 = st.columns([3, 1])
-        d = cm1.text_input(f"{t['desc']} Item {j+1}", key=f"md_{j}")
+        d = cm1.text_input(f"{t['item']} {j+1}", key=f"md_{j}")
         v = cm2.number_input(f"{t['costo']} {j+1}", min_value=0.0, key=f"mv_{j}")
         total_mat += v
         if d: lista_mat.append([d, v])
@@ -151,12 +121,13 @@ if "📝" in choice:
     total_contrato = mano_obra + total_mat
 
     st.markdown("---")
-    st.subheader(f"3. {t['pago_t']}")
-    col_p1, col_p2 = st.columns(2)
-    with col_p1: deposito = st.number_input(t["deposito"], min_value=0.0)
-    with col_p2: otros_pagos = st.number_input(t["otros_pagos"], min_value=0.0)
+    st.subheader(t["step3"])
+    cp1, cp2, cp3 = st.columns(3)
+    d1 = cp1.number_input(t["dep1"], min_value=0.0)
+    d2 = cp2.number_input(t["dep2"], min_value=0.0)
+    d3 = cp3.number_input(t["dep3"], min_value=0.0)
     
-    total_pagado = deposito + otros_pagos
+    total_pagado = d1 + d2 + d3
     balance_pendiente = total_contrato - total_pagado
 
     st.markdown("---")
@@ -166,78 +137,67 @@ if "📝" in choice:
     res3.metric(t["balance"], f"${balance_pendiente}")
     
     with res4:
-        if balance_pendiente <= 0 and total_contrato > 0:
-            st.markdown(f"<div class='status-paid'>{t['status_p']}</div>", unsafe_allow_html=True)
-        else:
-            st.markdown(f"<div class='status-pending'>{t['status_pen']}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='{'status-paid' if balance_pendiente <= 0 else 'status-pending'}'>{t['status_p'] if balance_pendiente <= 0 else t['status_pen']}</div>", unsafe_allow_html=True)
 
     if st.button(t["btn_pdf"]):
-        guardar_datos(pd.DataFrame([[str(fecha), cliente, total_contrato, total_pagado, balance_pendiente]], 
-                                   columns=["Fecha", "Cliente", "Total", "Pagado", "Balance"]), "historial.csv")
+        guardar_datos(pd.DataFrame([[str(fecha_input), cliente, total_contrato, d1, d2, d3, total_pagado, balance_pendiente]], 
+                                   columns=["Fecha", "Cliente", "Total", "Dep1", "Dep2", "Dep3", "Pagado", "Balance"]), "historial.csv")
         pdf = FPDF()
         pdf.add_page()
         if os.path.exists("5104.jpg"): pdf.image("5104.jpg", 10, 8, 30)
-        
         pdf.set_font("Arial", "B", 16); pdf.cell(0, 10, "JR CRUZ MASONRY LLC", 0, 1, "C"); pdf.ln(15)
-        pdf.set_font("Arial", "B", 12); pdf.cell(0, 8, f"{'Client' if idioma=='English' else 'Cliente'}: {cliente}", 0, 1)
-        pdf.set_font("Arial", "", 10); pdf.cell(0, 8, f"{'Date' if idioma=='English' else 'Fecha'}: {fecha}", 0, 1); pdf.ln(5)
+        pdf.set_font("Arial", "B", 12); pdf.cell(0, 8, f"{t['cliente']}: {cliente}", 0, 1)
+        pdf.set_font("Arial", "", 10); pdf.cell(0, 8, f"{t['fecha']}: {fecha_input}", 0, 1); pdf.ln(5)
         
-        # Tabla dinámica según idioma
         pdf.set_fill_color(26, 79, 139); pdf.set_text_color(255, 255, 255)
-        pdf.cell(140, 8, t["pdf_desc"], 1, 0, "C", True); pdf.cell(50, 8, t["pdf_cant"], 1, 1, "C", True)
+        pdf.cell(140, 8, t["desc"], 1, 0, "C", True); pdf.cell(50, 8, t["costo"], 1, 1, "C", True)
         pdf.set_text_color(0, 0, 0)
-        
         pdf.cell(140, 8, t["mano_obra"], 1); pdf.cell(50, 8, f"${mano_obra}", 1, 1, "R")
         for m in lista_mat:
-            pdf.cell(140, 8, str(m[0]), 1); pdf.cell(50, 8, f"${m[1]}", 1, 1, "R")
+            pdf.cell(140, 8, m[0], 1); pdf.cell(50, 8, f"${m[1]}", 1, 1, "R")
         
         pdf.ln(5); pdf.set_font("Arial", "B", 11)
-        pdf.cell(140, 10, t["total_c"], 1); pdf.cell(50, 10, f"${total_contrato}", 1, 1, "R")
-        pdf.set_text_color(0, 120, 0)
-        pdf.cell(140, 10, t["total_p"], 1); pdf.cell(50, 10, f"- ${total_pagado}", 1, 1, "R")
+        pdf.cell(140, 8, t["total_c"], 1); pdf.cell(50, 8, f"${total_contrato}", 1, 1, "R")
+        if d1 > 0: pdf.cell(140, 8, t["dep1"], 1); pdf.cell(50, 8, f"- ${d1}", 1, 1, "R")
+        if d2 > 0: pdf.cell(140, 8, t["dep2"], 1); pdf.cell(50, 8, f"- ${d2}", 1, 1, "R")
+        if d3 > 0: pdf.cell(140, 8, t["dep3"], 1); pdf.cell(50, 8, f"- ${d3}", 1, 1, "R")
         pdf.set_text_color(200, 0, 0)
         pdf.cell(140, 10, t["balance"], 1); pdf.cell(50, 10, f"${balance_pendiente}", 1, 1, "R")
         
-        if balance_pendiente <= 0:
-            pdf.ln(5); pdf.set_text_color(0, 128, 0); pdf.set_font("Arial", "B", 14)
-            pdf.cell(0, 10, t["status_p"], 0, 1, "C")
+        pdf_file = f"Invoice_{cliente}.pdf"
+        pdf.output(pdf_file)
+        with open(pdf_file, "rb") as f: st.download_button(f"📩 {t['btn_pdf']}", f, file_name=pdf_file)
 
-        p_f = f"Invoice_{cliente}.pdf"
-        pdf.output(p_f)
-        with open(p_f, "rb") as f: st.download_button(f"📩 {t['btn_pdf']}", f, file_name=p_f)
-
-# --- MODULO 4: HISTORIAL ACTUALIZADO ---
 elif "📋" in choice:
     st.title(t["menu"][3])
     t1, t2 = st.tabs([t["menu"][0], t["menu"][2]])
     with t1:
         if os.path.exists("historial.csv"):
-            df_hist = pd.read_csv("historial.csv")
-            # Cambiamos nombres de columnas para que coincidan con el idioma
-            df_hist.columns = ["Fecha", "Cliente", t["total_c"], t["total_p"], t["balance"]]
-            st.dataframe(df_hist, use_container_width=True)
+            df = pd.read_csv("historial.csv")
+            # Traducir encabezados del historial en pantalla
+            df.columns = [t['fecha'], t['cliente'], t['total_c'], t['dep1'], t['dep2'], t['dep3'], t['total_p'], t['balance']]
+            st.dataframe(df, use_container_width=True)
             if st.button("Reset Historial"): os.remove("historial.csv"); st.rerun()
     with t2:
         if os.path.exists("nomina.csv"): st.dataframe(pd.read_csv("nomina.csv"), use_container_width=True)
 
-# --- OTROS MODULOS (Sin cambios) ---
+# Los demás módulos (Citas, Nómina, Catálogo) se mantienen con lógica similar bilingüe
 elif "📅" in choice:
     st.title(t["menu"][1])
     with st.form("f_c"):
-        f = st.date_input("Fecha"); h = st.time_input("Hora"); c = st.text_input("Cliente"); n = st.text_area("Notas")
-        if st.form_submit_button("Agendar"):
-            guardar_datos(pd.DataFrame([[str(f), str(h), c, n]], columns=["Fecha", "Hora", "Cliente", "Notas"]), "citas.csv")
-            st.success("Guardado")
+        f = st.date_input(t["fecha"]); h = st.time_input("Time"); c = st.text_input(t["cliente"]); n = st.text_area("Notes")
+        if st.form_submit_button("Save"):
+            guardar_datos(pd.DataFrame([[str(f), str(h), c, n]], columns=["Date", "Time", "Client", "Notes"]), "citas.csv")
+            st.success("Saved!")
     if os.path.exists("citas.csv"): st.dataframe(pd.read_csv("citas.csv"), use_container_width=True)
 
 elif "👥" in choice:
     st.title(t["menu"][2])
     with st.form("f_n"):
-        nom = st.text_input("Nombre"); hrs = st.number_input("Horas", min_value=0.0); pag = st.number_input("Pago/Hr", min_value=0.0)
-        if st.form_submit_button("Registrar"):
-            tot = hrs * pag
-            guardar_datos(pd.DataFrame([[str(datetime.now().date()), nom, tot]], columns=["Fecha", "Empleado", "Total"]), "nomina.csv")
-            st.info(f"Total: ${tot}")
+        nom = st.text_input("Name"); hrs = st.number_input("Hours", min_value=0.0); pag = st.number_input("Pay/Hr", min_value=0.0)
+        if st.form_submit_button("Register"):
+            guardar_datos(pd.DataFrame([[str(datetime.now().date()), nom, hrs*pag]], columns=["Date", "Employee", "Total"]), "nomina.csv")
+            st.info(f"Total: ${hrs*pag}")
 
 elif "🛒" in choice:
     st.title(t["cat_t"])
