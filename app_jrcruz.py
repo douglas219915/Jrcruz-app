@@ -66,10 +66,10 @@ texts = {
         "cat_list": [
             ("Loseta (Tile)", "https://www.flooranddecor.com/tile", "tile.jpg.png"),
             ("Piedra (Stone)", "https://www.flooranddecor.com/stone", "stone.jpg.png"),
-            ("Madera (Wood)", "https://www.flooranddecor.com/hardwood", "wood.jpg.png"),
+            ("Madera (Wood)", "https://www.flooranddecor.com/wood", "wood.jpg.png"),
             ("Laminado (Laminate)", "https://www.flooranddecor.com/laminate", "laminate.jpg.JPG"),
             ("Vinilo (Vinyl)", "https://www.flooranddecor.com/vinyl", "vinyl.jpg.JPG"),
-            ("Decorativos (Backsplash)", "https://www.flooranddecor.com/decorative-tile", "decoratives.jpg.jpeg"),
+            ("Decorativos (Backsplash)", "https://www.flooranddecor.com/decoratives", "decoratives.jpg.jpeg"),
             ("Baños y Gabinetes (Fixtures)", "https://www.flooranddecor.com/bathroom-fixtures", "fixtures.jpg.png"),
             ("Materiales (Grout/Cement)", "https://www.flooranddecor.com/installation-materials", "materials.jpg.jpeg")
         ]
@@ -93,10 +93,10 @@ texts = {
         "cat_list": [
             ("Tile", "https://www.flooranddecor.com/tile", "tile.jpg.png"),
             ("Stone", "https://www.flooranddecor.com/stone", "stone.jpg.png"),
-            ("Wood", "https://www.flooranddecor.com/hardwood", "wood.jpg.png"),
+            ("Wood", "https://www.flooranddecor.com/wood", "wood.jpg.png"),
             ("Laminate", "https://www.flooranddecor.com/laminate", "laminate.jpg.JPG"),
             ("Vinyl", "https://www.flooranddecor.com/vinyl", "vinyl.jpg.JPG"),
-            ("Decoratives", "https://www.flooranddecor.com/decorative-tile", "decoratives.jpg.jpeg"),
+            ("Decoratives", "https://www.flooranddecor.com/decoratives", "decoratives.jpg.jpeg"),
             ("Fixtures (Bathroom)", "https://www.flooranddecor.com/bathroom-fixtures", "fixtures.jpg.png"),
             ("Installation Materials", "https://www.flooranddecor.com/installation-materials", "materials.jpg.jpeg")
         ]
