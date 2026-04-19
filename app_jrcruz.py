@@ -35,10 +35,10 @@ texts = {
         "categories": [
             ("Tile", "https://www.flooranddecor.com/tile", "https://images.unsplash.com/photo-1516528387618-afa90b13e000?w=500"),
             ("Stone (Marble)", "https://www.flooranddecor.com/stone", "https://images.unsplash.com/photo-1628595351029-c2bf17511435?w=500"),
-            ("Wood", "https://www.flooranddecor.com/hardwood", "https://images.unsplash.com/photo-1505015920881-0f83c2f7c95e?w=500"),
+            ("Wood", "https://www.flooranddecor.com/wood", "https://images.unsplash.com/photo-1505015920881-0f83c2f7c95e?w=500"),
             ("Laminate", "https://www.flooranddecor.com/laminate", "https://images.unsplash.com/photo-1515263487990-61b07816b324?w=500"),
             ("Vinyl", "https://www.flooranddecor.com/vinyl", "https://images.unsplash.com/photo-1622397333309-3056849bc70b?w=500"),
-            ("Decoratives (Backsplash)", "https://www.flooranddecor.com/decorative-bathroom-tile-stone", "https://images.unsplash.com/photo-1584622781564-1d987f7333c1?w=500"),
+            ("Decoratives (Backsplash)", "https://www.flooranddecor.com/decorative", "https://images.unsplash.com/photo-1584622781564-1d987f7333c1?w=500"),
             ("Fixtures (Bath & Cabinets)", "https://www.flooranddecor.com/bathroom-fixtures", "https://images.unsplash.com/photo-1620626011761-9963d7521576?w=500"),
             ("Installation Materials (Grout)", "https://www.flooranddecor.com/installation-materials", "https://images.unsplash.com/photo-1589939705384-5185138a04b9?w=500")
         ]
