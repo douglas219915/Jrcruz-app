@@ -67,8 +67,22 @@ if choice == "📊 Calculadora de Materiales":
             st.error("Por favor, ingresa el largo y ancho del área.")
 
 elif choice == "👥 Nómina Semanal":
-    st.header("Control de Pagos")
-    st.write("Módulo de nómina en construcción...")
+    st.header("Control de Pagos y Horas")
+    with st.form("nomina_form"):
+        col_emp, col_hr, col_rate = st.columns([2, 1, 1])
+        with col_emp:
+            empleado = st.text_input("Nombre del Trabajador")
+        with col_hr:
+            horas = st.number_input("Horas Semanales", min_value=0.0, step=0.5)
+        with col_rate:
+            pago_hora = st.number_input("Pago por Hora ($)", min_value=0.0, step=1.0)
+        btn_nomina = st.form_submit_button("Registrar Pago")
+
+    if btn_nomina:
+        if empleado and horas > 0:
+            total_pago = horas * pago_hora
+            st.success(f"Registro completado para **{empleado}**")
+            st.table({"Concepto": ["Horas", "Pago/Hr", "Total"], "Detalle": [f"{horas}", f"${pago_hora}", f"${total_pago}"]})
 
 # 5. Pie de página
 st.markdown("---")
