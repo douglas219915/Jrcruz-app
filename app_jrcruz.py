@@ -7,100 +7,107 @@ import base64
 # 1. Configuración de página
 st.set_page_config(page_title="JR CRUZ MASONRY LLC", page_icon="🏗️", layout="wide")
 
-# Función para convertir imagen local a Base64 para el fondo
-def get_base64_image(image_path):
-    with open(image_path, "rb") as img_file:
-        return base64.b64encode(img_file.read()).decode()
+# Función para preparar la imagen de fondo
+def get_base64(file):
+    with open(file, "rb") as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
 
-# --- CSS PARA LOGO SOMBREADO EN EL FONDO Y DISEÑO LIMPIO ---
+# --- CSS PARA LOGO SOMBREADO Y DISEÑO ---
 if os.path.exists("5104.jpg"):
-    img_base64 = get_base64_image("5104.jpg")
-    bg_style = f"""
-    <style>
-    [data-testid="stAppViewContainer"] {{
-        background-image: linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)), url("data:image/jpg;base64,{img_base64}");
-        background-size: 600px;
-        background-repeat: no-repeat;
-        background-attachment: fixed;
-        background-position: center;
-    }}
-    /* Ajustes adicionales de visibilidad */
-    .stApp {{ background-color: transparent; }}
-    [data-testid="stImage"] img {{
-        height: 280px;
-        object-fit: cover;
-        border-radius: 15px;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
-    }}
-    .stButton>button {{ width: 100%; background-color: #1A4F8B; color: white; border-radius: 8px; font-weight: bold; }}
-    h1, h2, h3 {{ color: #1A4F8B; text-shadow: 1px 1px 2px white; }}
-    </style>
-    """
-    st.markdown(bg_style, unsafe_allow_html=True)
+    bin_str = get_base64("5104.jpg")
+    st.markdown(f"""
+        <style>
+        [data-testid="stAppViewContainer"] {{
+            background-image: linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.9)), url("data:image/jpg;base64,{bin_str}");
+            background-size: 500px;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-position: center;
+        }}
+        .stButton>button {{ width: 100%; background-color: #1A4F8B; color: white; border-radius: 8px; font-weight: bold; }}
+        [data-testid="stImage"] img {{ border-radius: 15px; object-fit: cover; height: 250px; }}
+        h1, h2, h3 {{ color: #1A4F8B; }}
+        </style>
+    """, unsafe_allow_html=True)
 
-# --- IDIOMA ---
-idioma = st.sidebar.radio("🌐 Language / Idioma", ["Español", "English"])
+# --- LÓGICA DE DATOS ---
+def guardar_datos(df, filename):
+    if not os.path.isfile(filename): df.to_csv(filename, index=False)
+    else: df.to_csv(filename, mode='a', header=False, index=False)
 
-# --- DICCIONARIOS ---
-texts = {
-    "Español": {
-        "menu": ["📊 Calculadora", "👥 Nómina", "📋 Historial", "📸 Fotos", "🛒 Catálogo Floor & Decor"],
-        "cat_h": "Catálogo de Materiales Sugeridos",
-        "categories": [
-            ("Tile (Loseta)", "https://www.flooranddecor.com/tile", "tile.jpg.png"),
-            ("Stone (Piedra)", "https://www.flooranddecor.com/stone", "stone.jpg.png"),
-            ("Wood (Madera)", "https://www.flooranddecor.com/hardwood", "wood.jpg.png"),
-            ("Laminate (Laminado)", "https://www.flooranddecor.com/laminate", "laminate.jpg.JPG"),
-            ("Vinyl (Vinilo)", "https://www.flooranddecor.com/vinyl", "vinyl.jpg.JPG"),
-            ("Decoratives (Backsplash)", "https://www.flooranddecor.com/decorative-tile", "decoratives.jpg.jpeg"),
-            ("Fixtures (Baño)", "https://www.flooranddecor.com/bathroom-fixtures", "fixtures.jpg.png"),
-            ("Materials (Grout)", "https://www.flooranddecor.com/installation-materials", "materials.jpg.jpeg")
-        ]
-    },
-    "English": {
-        "menu": ["📊 Calculator", "👥 Payroll", "📋 History", "📸 Photos", "🛒 Floor & Decor Catalog"],
-        "cat_h": "Suggested Materials Catalog",
-        "categories": [
-            ("Tile", "https://www.flooranddecor.com/tile", "tile.jpg.png"),
-            ("Stone", "https://www.flooranddecor.com/stone", "stone.jpg.png"),
-            ("Wood", "https://www.flooranddecor.com/hardwood", "wood.jpg.png"),
-            ("Laminate", "https://www.flooranddecor.com/laminate", "laminate.jpg.JPG"),
-            ("Vinyl", "https://www.flooranddecor.com/vinyl", "vinyl.jpg.JPG"),
-            ("Decoratives (Backsplash)", "https://www.flooranddecor.com/decorative-tile", "decoratives.jpg.jpeg"),
-            ("Fixtures (Bathroom)", "https://www.flooranddecor.com/bathroom-fixtures", "fixtures.jpg.png"),
-            ("Materials (Supplies)", "https://www.flooranddecor.com/installation-materials", "materials.jpg.jpeg")
-        ]
-    }
+# --- MENÚ LATERAL ---
+idioma = st.sidebar.radio("🌐 Idioma", ["Español", "English"])
+menu_options = {
+    "Español": ["📊 Calculadora", "👥 Nómina", "📋 Historial", "📸 Fotos", "🛒 Catálogo"],
+    "English": ["📊 Calculator", "👥 Payroll", "📋 History", "📸 Photos", "🛒 Catalog"]
 }
-t = texts[idioma]
+choice = st.sidebar.selectbox("Seleccione una opción", menu_options[idioma])
 
-# --- ENCABEZADO ---
-st.title("JR CRUZ MASONRY LLC")
-st.write("---")
+# --- MÓDULOS PRINCIPALES ---
 
-# --- NAVEGACIÓN ---
-choice = st.sidebar.selectbox("Panel", t["menu"])
+# 1. CALCULADORA
+if "📊" in choice:
+    st.title("📊 Calculadora de Área")
+    with st.form("calc_form"):
+        cliente = st.text_input("Nombre del Proyecto/Cliente")
+        col1, col2 = st.columns(2)
+        with col1: largo = st.number_input("Largo (ft)", min_value=0.0)
+        with col2: ancho = st.number_input("Ancho (ft)", min_value=0.0)
+        if st.form_submit_button("Calcular y Guardar"):
+            total = round(largo * ancho, 2)
+            nuevo = pd.DataFrame([[datetime.now().strftime("%Y-%m-%d"), cliente, total]], columns=["Fecha", "Cliente", "Sqft"])
+            guardar_datos(nuevo, "historial.csv")
+            st.success(f"Total: {total} sqft")
 
-# --- MÓDULO CATÁLOGO (CORREGIDO) ---
-if "🛒" in choice:
-    st.header(t["cat_h"])
-    items = t["categories"]
-    for i in range(0, len(items), 2):
+# 2. NÓMINA
+elif "👥" in choice:
+    st.title("👥 Nómina Semanal")
+    with st.form("nomina_form"):
+        nombre = st.text_input("Nombre del Trabajador")
+        h = st.number_input("Horas", min_value=0.0)
+        p = st.number_input("Pago por Hora", min_value=0.0)
+        if st.form_submit_button("Registrar Pago"):
+            total_pago = h * p
+            nuevo_p = pd.DataFrame([[datetime.now().strftime("%Y-%m-%d"), nombre, total_pago]], columns=["Fecha", "Empleado", "Total"])
+            guardar_datos(nuevo_p, "nomina.csv")
+            st.info(f"Total a pagar: ${total_pago}")
+
+# 3. HISTORIAL
+elif "📋" in choice:
+    st.title("📋 Historial de Registros")
+    if os.path.exists("historial.csv"):
+        st.subheader("Proyectos")
+        st.dataframe(pd.read_csv("historial.csv"), use_container_width=True)
+    if os.path.exists("nomina.csv"):
+        st.subheader("Nómina")
+        st.dataframe(pd.read_csv("nomina.csv"), use_container_width=True)
+
+# 4. FOTOS
+elif "📸" in choice:
+    st.title("📸 Galería de Obra")
+    archivo = st.file_uploader("Subir foto de progreso", type=["jpg", "png", "jpeg"])
+    if archivo: st.image(archivo, use_container_width=True)
+
+# 5. CATÁLOGO
+elif "🛒" in choice:
+    st.title("🛒 Catálogo Floor & Decor")
+    # Nombres exactos de tus archivos en GitHub
+    cat = [
+        ("Tile", "https://www.flooranddecor.com/tile", "tile.jpg.png"),
+        ("Stone", "https://www.flooranddecor.com/stone", "stone.jpg.png"),
+        ("Wood", "https://www.flooranddecor.com/hardwood", "wood.jpg.png"),
+        ("Laminate", "https://www.flooranddecor.com/laminate", "laminate.jpg.JPG")
+    ]
+    for i in range(0, len(cat), 2):
         cols = st.columns(2)
         for j in range(2):
-            if i + j < len(items):
-                name, link, img = items[i+j]
+            if i+j < len(cat):
+                n, l, img = cat[i+j]
                 with cols[j]:
-                    if os.path.exists(img):
-                        st.image(img, use_container_width=True)
-                    else:
-                        st.warning(f"Imagen no disponible: {img}")
-                    st.subheader(name)
-                    st.link_button(f"Ver {name}", link)
-                    st.write("")
+                    if os.path.exists(img): st.image(img, use_container_width=True)
+                    st.subheader(n)
+                    st.link_button(f"Ver {n}", l)
 
-# --- OTROS MÓDULOS (CALCULADORA, NÓMINA, ETC) ---
-# (Se mantienen igual para no fallar)
-elif "📊" in choice:
-    st.header(t["menu"][0])
-    # ... código de calculadora ...
+st.sidebar.markdown("---")
+st.sidebar.caption("©️ 2026 JR CRUZ MASONRY LLC")
