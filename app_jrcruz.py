@@ -14,7 +14,7 @@ def get_base64(file):
             return base64.b64encode(f.read()).decode()
     except: return None
 
-# --- CSS: LOGO Y ESTILOS ---
+# --- CSS: ESTILOS Y LOGO ---
 logo_b64 = get_base64("5104.jpg")
 st.markdown(f"""
     <style>
@@ -29,22 +29,24 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# --- TRADUCCIONES ---
+# --- TRADUCCIONES (CORREGIDAS PARA EVITAR ERRORES) ---
 idioma = st.sidebar.radio("🌐 Language / Idioma", ["Español", "English"])
 texts = {
     "Español": {
         "menu": ["📝 Nuevo Estimado", "📋 Historial y Pagos", "📅 Citas", "👥 Nómina", "🛒 Catálogo"],
+        "step1": "1. Áreas y Medidas (Sqft)", "step2": "2. Desglose de Trabajo y Materiales", "step3": "3. Registro de Pagos",
         "cliente": "Cliente", "fecha": "Fecha", "desc": "Descripción", "largo": "Largo (ft)", "ancho": "Ancho (ft)",
-        "mano_obra": "Mano de Obra", "costo": "Costo ($)", "item": "Artículo",
-        "dep": "Depósito", "total_c": "Total Contrato", "total_p": "Total Pagado", "balance": "Balance Pendiente",
-        "btn_pdf": "Guardar y Generar PDF", "btn_upd_pdf": "Descargar Recibo Actualizado PDF", "ver_mas": "Ver detalles"
+        "mano_obra": "Mano de Obra", "costo": "Costo ($)", "item": "Artículo", "dep": "Depósito",
+        "total_c": "Total Contrato", "total_p": "Total Pagado", "balance": "Balance Pendiente",
+        "btn_pdf": "Guardar Registro", "btn_upd_pdf": "Descargar Recibo PDF", "ver_mas": "Ver detalles"
     },
     "English": {
         "menu": ["📝 New Estimate", "📋 History & Payments", "📅 Appointments", "👥 Payroll", "🛒 Catalog"],
+        "step1": "1. Areas & Measurements (Sqft)", "step2": "2. Labor & Materials Breakdown", "step3": "3. Payment Record",
         "cliente": "Client", "fecha": "Date", "desc": "Description", "largo": "Length (ft)", "ancho": "Width (ft)",
-        "mano_obra": "Labor Cost", "costo": "Cost ($)", "item": "Item",
-        "dep": "Deposit", "total_c": "Total Contract", "total_p": "Total Paid", "balance": "Balance Due",
-        "btn_pdf": "Save and Generate PDF", "btn_upd_pdf": "Download Updated Receipt PDF", "ver_mas": "View details"
+        "mano_obra": "Labor Cost", "costo": "Cost ($)", "item": "Item", "dep": "Deposit",
+        "total_c": "Total Contract", "total_p": "Total Paid", "balance": "Balance Due",
+        "btn_pdf": "Save Record", "btn_upd_pdf": "Download Receipt PDF", "ver_mas": "View details"
     }
 }
 t = texts[idioma]
@@ -60,9 +62,9 @@ if "📝" in choice:
 
     st.subheader(t["step1"])
     if 'rows' not in st.session_state: st.session_state['rows'] = 1
-    col_b1, col_b2 = st.columns(2)
-    if col_b1.button("+ " + t["desc"]): st.session_state['rows'] += 1
-    if col_b2.button("- " + t["desc"]) and st.session_state['rows'] > 1: st.session_state['rows'] -= 1
+    cb1, cb2 = st.columns(2)
+    if cb1.button("+ Area"): st.session_state['rows'] += 1
+    if cb2.button("- Area") and st.session_state['rows'] > 1: st.session_state['rows'] -= 1
     for i in range(st.session_state['rows']):
         ca1, ca2, ca3 = st.columns([2, 1, 1])
         ca1.text_input(f"{t['desc']} {i+1}", key=f"n_{i}")
@@ -88,7 +90,7 @@ if "📝" in choice:
     
     lista_deps = []
     for k in range(st.session_state['dep_rows']):
-        v_dep = st.number_input(f"{t['dep']} {k+1} ($)", min_value=0.0, key=f"dval_{k}")
+        v_dep = st.number_input(f"{t['dep']} {k+1} ($)", min_value=0.0, key=f"dv_{k}")
         lista_deps.append(v_dep)
 
     total_contrato = mano_obra + total_mat
@@ -105,20 +107,21 @@ if "📝" in choice:
         deps_str = ";".join(map(str, lista_deps))
         df = pd.DataFrame([[str(fec), cliente, total_contrato, deps_str, total_pagado, balance]], 
                           columns=["Fecha", "Cliente", "Total", "Depositos", "Pagado", "Balance"])
-        file = "historial_v4.csv"
+        file = "historial_final.csv"
         if not os.path.exists(file): df.to_csv(file, index=False)
         else: df.to_csv(file, mode='a', header=False, index=False)
-        st.success("Estimado Guardado.")
+        st.success("¡Datos guardados correctamente!")
 
-# --- MODULO 2: HISTORIAL Y DESCARGA PDF ---
+# --- MODULO 2: HISTORIAL Y PDF ---
 elif "📋" in choice:
     st.title(t["menu"][1])
-    file = "historial_v4.csv"
+    file = "historial_final.csv"
     if os.path.exists(file):
         df_h = pd.read_csv(file)
         st.dataframe(df_h, use_container_width=True)
         
-        sel_c = st.selectbox("Seleccione Cliente para PDF", df_h["Cliente"].unique())
+        st.subheader("Generar PDF de Cliente")
+        sel_c = st.selectbox("Seleccione Cliente", df_h["Cliente"].unique())
         if sel_c:
             datos = df_h[df_h["Cliente"] == sel_c].iloc[-1]
             if st.button(t["btn_upd_pdf"]):
@@ -144,31 +147,32 @@ elif "📋" in choice:
                 
                 out = f"Recibo_{sel_c}.pdf"
                 pdf.output(out)
-                with open(out, "rb") as f: st.download_button("📩 Descargar PDF", f, file_name=out)
+                with open(out, "rb") as f: st.download_button("📩 Haz clic aquí para descargar", f, file_name=out)
 
-# --- MODULO 3: CITAS (CORREGIDO) ---
+# --- MODULO 3: CITAS (FUNCIONANDO) ---
 elif "📅" in choice:
     st.title(t["menu"][2])
-    with st.form("citas_f"):
+    with st.form("citas_form"):
         fc = st.date_input(t["fecha"]); hc = st.time_input("Hora"); clc = st.text_input(t["cliente"])
-        if st.form_submit_button("Agendar"):
+        if st.form_submit_button("Agendar Cita"):
             df_c = pd.DataFrame([[str(fc), str(hc), clc]], columns=["Fecha", "Hora", "Cliente"])
             if not os.path.exists("citas.csv"): df_c.to_csv("citas.csv", index=False)
             else: df_c.to_csv("citas.csv", mode='a', header=False, index=False)
-            st.success("Cita Agendada")
+            st.success("Cita guardada con éxito.")
     if os.path.exists("citas.csv"): st.dataframe(pd.read_csv("citas.csv"))
 
-# --- MODULO 4: NÓMINA (CORREGIDO) ---
+# --- MODULO 4: NÓMINA (FUNCIONANDO) ---
 elif "👥" in choice:
     st.title(t["menu"][3])
-    with st.form("nomina_f"):
-        emp = st.text_input("Empleado"); hrs = st.number_input("Horas"); tar = st.number_input("Tarifa x Hora")
-        if st.form_submit_button("Registrar Pago"):
-            df_n = pd.DataFrame([[datetime.now().strftime("%Y-%m-%d"), emp, hrs*tar]], columns=["Fecha", "Empleado", "Total"])
-            if not os.path.exists("payroll.csv"): df_n.to_csv("payroll.csv", index=False)
-            else: df_n.to_csv("payroll.csv", mode='a', header=False, index=False)
-            st.success(f"Registrado: ${hrs*tar}")
-    if os.path.exists("payroll.csv"): st.dataframe(pd.read_csv("payroll.csv"))
+    with st.form("nomina_form"):
+        emp = st.text_input("Nombre del Empleado"); hras = st.number_input("Horas Trabajadas"); tari = st.number_input("Tarifa x Hora")
+        if st.form_submit_button("Registrar Nómina"):
+            total_n = hras * tari
+            df_n = pd.DataFrame([[datetime.now().strftime("%Y-%m-%d"), emp, total_n]], columns=["Fecha", "Empleado", "Pago Total"])
+            if not os.path.exists("nomina.csv"): df_n.to_csv("nomina.csv", index=False)
+            else: df_n.to_csv("nomina.csv", mode='a', header=False, index=False)
+            st.success(f"Pago de ${total_n} registrado.")
+    if os.path.exists("nomina.csv"): st.dataframe(pd.read_csv("nomina.csv"))
 
 # --- MODULO 5: CATÁLOGO ---
 elif "🛒" in choice:
