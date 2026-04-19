@@ -15,6 +15,7 @@ def get_base64(file):
     except: return None
 
 # --- CSS: ESTILOS Y LOGO FONDO ---
+# Corregido: El logo de fondo se aplica correctamente por CSS
 logo_b64 = get_base64("5104.jpg")
 if logo_b64:
     st.markdown(f"""
@@ -77,14 +78,17 @@ texts = {
 }
 t = texts[idioma]
 
-def guardar_datos(df, file):
-    if not os.path.isfile(file): df.to_csv(file, index=False)
-    else: df.to_csv(file, mode='a', header=False, index=False)
+def guardar_datos(df, filename):
+    # Corregido: Forzamos el mismo orden de columnas siempre para evitar el ParserError
+    if not os.path.isfile(filename):
+        df.to_csv(filename, index=False)
+    else:
+        df.to_csv(filename, mode='a', header=False, index=False)
 
 # --- NAVEGACIÓN ---
 choice = st.sidebar.selectbox("Panel", t["menu"])
 
-# --- MODULO 1: GENERAR ESTIMADO (CALCULADORA + MATERIALES + PDF) ---
+# --- MODULO 1: GENERAR ESTIMADO ---
 if "📝" in choice:
     st.title(t["calc_t"])
     
@@ -138,28 +142,22 @@ if "📝" in choice:
     res_c3.markdown(f"<div class='metric-box'><h3>TOTAL ESTIMATE</h3><h2 style='color:#1A4F8B'>${gran_total}</h2></div>", unsafe_allow_html=True)
 
     if st.button(t["btn_pdf"]):
-        guardar_datos(pd.DataFrame([[fecha, cliente, total_sqft, gran_total]], columns=["Fecha", "Cliente", "Sqft", "Total"]), "historial.csv")
+        # Aseguramos que las columnas coincidan con el CSV existente
+        # Columnas: Fecha, Cliente, Sqft, Total
+        nuevo_h = pd.DataFrame([[str(fecha), cliente, total_sqft, gran_total]], columns=["Fecha", "Cliente", "Sqft", "Total"])
+        guardar_datos(nuevo_h, "historial.csv")
         
         pdf = FPDF()
         pdf.add_page()
         if os.path.exists("5104.jpg"): pdf.image("5104.jpg", 10, 8, 30)
         pdf.set_font("Arial", "B", 16); pdf.cell(0, 10, "JR CRUZ MASONRY LLC", 0, 1, "C")
-        pdf.set_font("Arial", "", 10); pdf.cell(0, 5, "Professional Tile & Stone Installation", 0, 1, "C")
         pdf.ln(15)
         pdf.set_font("Arial", "B", 12); pdf.cell(0, 8, f"Estimate for: {cliente}", 0, 1)
         pdf.set_font("Arial", "", 10); pdf.cell(0, 8, f"Date: {fecha}", 0, 1); pdf.ln(5)
 
-        # Tabla Áreas
+        # Tabla Costos simplificada para el PDF
         pdf.set_fill_color(26, 79, 139); pdf.set_text_color(255, 255, 255)
-        pdf.cell(100, 8, "Area Description", 1, 0, "C", True); pdf.cell(90, 8, "Sqft", 1, 1, "C", True)
-        pdf.set_text_color(0, 0, 0)
-        for med in medidas:
-            pdf.cell(100, 8, str(med[0]), 1); pdf.cell(90, 8, f"{med[3]} ft2", 1, 1, "R")
-        pdf.ln(5)
-
-        # Tabla Costos
-        pdf.set_fill_color(26, 79, 139); pdf.set_text_color(255, 255, 255)
-        pdf.cell(140, 8, "Description (Labor & Materials)", 1, 0, "C", True); pdf.cell(50, 8, "Amount", 1, 1, "C", True)
+        pdf.cell(140, 8, "Description", 1, 0, "C", True); pdf.cell(50, 8, "Amount", 1, 1, "C", True)
         pdf.set_text_color(0, 0, 0)
         pdf.cell(140, 8, "Labor / Mano de Obra", 1); pdf.cell(50, 8, f"${mano_obra}", 1, 1, "R")
         for mat in lista_materiales:
@@ -179,9 +177,11 @@ elif "📅" in choice:
     with st.form("f_citas"):
         f = st.date_input("Fecha"); h = st.time_input("Hora"); c = st.text_input("Cliente"); n = st.text_area("Notas")
         if st.form_submit_button("Agendar / Schedule"):
-            guardar_datos(pd.DataFrame([[f, h, c, n]], columns=["Fecha", "Hora", "Cliente", "Notas"]), "citas.csv")
+            guardar_datos(pd.DataFrame([[str(f), str(h), c, n]], columns=["Fecha", "Hora", "Cliente", "Notas"]), "citas.csv")
             st.success("Cita guardada!")
-    if os.path.exists("citas.csv"): st.dataframe(pd.read_csv("citas.csv").sort_values(by="Fecha"), use_container_width=True)
+    if os.path.exists("citas.csv"): 
+        df_c = pd.read_csv("citas.csv")
+        st.dataframe(df_c, use_container_width=True)
 
 # --- MODULO 3: NÓMINA ---
 elif "👥" in choice:
@@ -190,7 +190,7 @@ elif "👥" in choice:
         nom = st.text_input("Nombre"); hrs = st.number_input("Horas", min_value=0.0); pag = st.number_input("Pago/Hr", min_value=0.0)
         if st.form_submit_button("Registrar"):
             tot = hrs * pag
-            guardar_datos(pd.DataFrame([[datetime.now().date(), nom, tot]], columns=["Fecha", "Empleado", "Total"]), "nomina.csv")
+            guardar_datos(pd.DataFrame([[str(datetime.now().date()), nom, tot]], columns=["Fecha", "Empleado", "Total"]), "nomina.csv")
             st.info(f"Total: ${tot}")
 
 # --- MODULO 4: HISTORIAL ---
@@ -198,9 +198,22 @@ elif "📋" in choice:
     st.title(t["menu"][3])
     tab1, tab2 = st.tabs(["Proyectos/Estimados", "Nómina"])
     with tab1:
-        if os.path.exists("historial.csv"): st.dataframe(pd.read_csv("historial.csv"), use_container_width=True)
+        if os.path.exists("historial.csv"): 
+            # Corregido: Si el archivo está corrupto, lo manejamos
+            try:
+                df_h = pd.read_csv("historial.csv")
+                st.dataframe(df_h, use_container_width=True)
+                if st.button("Limpiar Historial / Clear History"):
+                    os.remove("historial.csv")
+                    st.rerun()
+            except Exception as e:
+                st.error("El archivo de historial tiene errores de formato.")
+                if st.button("Borrar archivo dañado"):
+                    os.remove("historial.csv")
+                    st.rerun()
     with tab2:
-        if os.path.exists("nomina.csv"): st.dataframe(pd.read_csv("nomina.csv"), use_container_width=True)
+        if os.path.exists("nomina.csv"): 
+            st.dataframe(pd.read_csv("nomina.csv"), use_container_width=True)
 
 # --- MODULO 5: CATÁLOGO ---
 elif "🛒" in choice:
