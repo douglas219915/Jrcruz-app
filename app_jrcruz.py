@@ -5,7 +5,7 @@ import os
 import base64
 from fpdf import FPDF
 
-# 1. CONFIGURACIÓN DE PÁGINA
+# 1. CONFIGURACIÓN INICIAL
 st.set_page_config(page_title="JR CRUZ MASONRY LLC", page_icon="🏗️", layout="wide")
 
 def get_base64(file):
@@ -14,7 +14,7 @@ def get_base64(file):
             return base64.b64encode(f.read()).decode()
     except: return None
 
-# --- ESTILOS Y LOGO ---
+# --- ESTILOS VISUALES ---
 logo_b64 = get_base64("5104.jpg")
 st.markdown(f"""
     <style>
@@ -28,7 +28,7 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# --- DICCIONARIO DE IDIOMAS ---
+# --- SISTEMA DE TRADUCCIÓN (CORREGIDO PARA EVITAR KEYERROR) ---
 idioma = st.sidebar.radio("🌐 Language / Idioma", ["Español", "English"])
 texts = {
     "Español": {
@@ -36,14 +36,16 @@ texts = {
         "cliente": "Cliente", "fecha": "Fecha", "desc": "Descripción", "largo": "Largo (ft)", "ancho": "Ancho (ft)",
         "mano_obra": "Mano de Obra", "costo": "Costo ($)", "item": "Artículo", "dep": "Depósito",
         "total_c": "Total Contrato", "total_p": "Total Pagado", "balance": "Balance Pendiente",
-        "btn_save": "Guardar Nuevo Registro", "btn_edit": "Actualizar Pagos y Guardar", "btn_pdf": "Descargar Recibo PDF"
+        "btn_save": "Guardar Nuevo Registro", "btn_edit": "Actualizar Pagos y Guardar", "btn_pdf": "Descargar Recibo PDF",
+        "ver_mas": "Ver detalles", "m_citas": "Módulo de Citas", "m_nomina": "Módulo de Nómina"
     },
     "English": {
         "menu": ["📝 New Estimate", "📋 History & Payments", "📅 Appointments", "👥 Payroll", "🛒 Catalog"],
         "cliente": "Client", "fecha": "Date", "desc": "Description", "largo": "Length (ft)", "ancho": "Width (ft)",
         "mano_obra": "Labor Cost", "costo": "Cost ($)", "item": "Item", "dep": "Deposit",
         "total_c": "Total Contract", "total_p": "Total Paid", "balance": "Balance Due",
-        "btn_save": "Save New Record", "btn_edit": "Update Payments & Save", "btn_pdf": "Download Receipt PDF"
+        "btn_save": "Save New Record", "btn_edit": "Update Payments & Save", "btn_pdf": "Download Receipt PDF",
+        "ver_mas": "View details", "m_citas": "Appointments Module", "m_nomina": "Payroll Module"
     }
 }
 t = texts[idioma]
@@ -78,7 +80,7 @@ if "📝" in choice:
         v_mat = cm2.number_input(f"{t['costo']} {j+1}", min_value=0.0, key=f"mv_{j}")
         total_mat += v_mat
 
-    st.subheader("3. Depósitos Iniciales")
+    st.subheader("3. Registro de Pagos")
     if 'dep_rows' not in st.session_state: st.session_state['dep_rows'] = 1
     if st.button("+ " + t["dep"]): st.session_state['dep_rows'] += 1
     
@@ -91,6 +93,12 @@ if "📝" in choice:
     total_pagado = sum(lista_deps)
     balance = total_contrato - total_pagado
 
+    st.markdown("---")
+    res1, res2, res3 = st.columns(3)
+    res1.metric(t["total_c"], f"${total_contrato}")
+    res2.metric(t["total_p"], f"${total_pagado}")
+    res3.metric(t["balance"], f"${balance}")
+
     if st.button(t["btn_save"]):
         deps_str = ";".join(map(str, lista_deps))
         df = pd.DataFrame([[str(fec), cliente, total_contrato, deps_str, total_pagado, balance]], 
@@ -98,7 +106,7 @@ if "📝" in choice:
         file = "historial_final.csv"
         if not os.path.exists(file): df.to_csv(file, index=False)
         else: df.to_csv(file, mode='a', header=False, index=False)
-        st.success("Guardado en Historial.")
+        st.success("¡Registro guardado exitosamente!")
 
 # --- MODULO 2: HISTORIAL Y EDICIÓN DINÁMICA ---
 elif "📋" in choice:
@@ -109,20 +117,16 @@ elif "📋" in choice:
         st.dataframe(df_h, use_container_width=True)
         
         st.markdown("---")
-        st.subheader("🔍 Actualizar Depósitos de Cliente")
+        st.subheader("🛠️ Gestionar Pagos por Cliente")
         sel_c = st.selectbox("Seleccione Cliente", [""] + list(df_h["Cliente"].unique()))
         
         if sel_c != "":
             idx = df_h[df_h["Cliente"] == sel_c].index[-1]
             datos = df_h.loc[idx]
-            # Recuperar depósitos guardados
             deps_actuales = [float(d) for d in str(datos["Depositos"]).split(";") if d]
 
-            # Control dinámico de celdas en edición
             if 'edit_count' not in st.session_state: st.session_state['edit_count'] = len(deps_actuales)
-            
-            col_eb1, col_eb2 = st.columns(2)
-            if col_eb1.button("+ Agregar Celda de Depósito"): st.session_state['edit_count'] += 1
+            if st.button("+ Agregar Celda de Depósito"): st.session_state['edit_count'] += 1
             
             nuevos_deps = []
             for i in range(st.session_state['edit_count']):
@@ -133,17 +137,16 @@ elif "📋" in choice:
             n_pagado = sum(nuevos_deps)
             n_balance = datos["Total"] - n_pagado
 
-            st.write(f"**Nuevo Balance:** ${n_balance}")
-
-            if st.button(t["btn_edit"]):
+            col_btn1, col_btn2 = st.columns(2)
+            if col_btn1.button(t["btn_edit"]):
                 df_h.at[idx, "Depositos"] = ";".join(map(str, nuevos_deps))
                 df_h.at[idx, "Pagado"] = n_pagado
                 df_h.at[idx, "Balance"] = n_balance
                 df_h.to_csv(file, index=False)
-                st.success("¡Datos Actualizados!")
+                st.success("¡Cambios guardados!")
                 st.rerun()
 
-            if st.button(t["btn_pdf"]):
+            if col_btn2.button(t["btn_pdf"]):
                 pdf = FPDF()
                 pdf.add_page()
                 if os.path.exists("5104.jpg"): pdf.image("5104.jpg", 10, 8, 30)
@@ -159,46 +162,53 @@ elif "📋" in choice:
                 pdf.set_text_color(200, 0, 0)
                 pdf.cell(100, 10, t["balance"], 1); pdf.cell(90, 10, f"${n_balance}", 1, 1, "R")
                 
-                out = f"Recibo_{sel_c}.pdf"
-                pdf.output(out)
-                with open(out, "rb") as f: st.download_button("📩 Descargar PDF Actualizado", f, file_name=out)
+                out_pdf = f"Recibo_{sel_c}.pdf"
+                pdf.output(out_pdf)
+                with open(out_pdf, "rb") as f: st.download_button("📩 Descargar PDF Actualizado", f, file_name=out_pdf)
 
 # --- MODULO 3: CITAS ---
 elif "📅" in choice:
-    st.title(t["menu"][2])
+    st.title(t["m_citas"])
     with st.form("form_citas"):
-        f_c = st.date_input(t["fecha"]); h_c = st.time_input("Hora"); cl_c = st.text_input(t["cliente"])
-        if st.form_submit_button("Agendar"):
-            df_c = pd.DataFrame([[str(f_c), str(h_c), cl_c]], columns=["Fecha", "Hora", "Cliente"])
+        fc_cita = st.date_input(t["fecha"])
+        hr_cita = st.time_input("Hora / Time")
+        cl_cita = st.text_input(t["cliente"])
+        if st.form_submit_button("Agendar Cita"):
+            df_c = pd.DataFrame([[str(fc_cita), str(hr_cita), cl_cita]], columns=["Fecha", "Hora", "Cliente"])
             df_c.to_csv("citas.csv", mode='a', index=False, header=not os.path.exists("citas.csv"))
-            st.success("Cita Agendada")
+            st.success("Cita agendada correctamente.")
     if os.path.exists("citas.csv"): st.dataframe(pd.read_csv("citas.csv"))
 
 # --- MODULO 4: NÓMINA ---
 elif "👥" in choice:
-    st.title(t["menu"][3])
-    with st.form("form_nomina"):
-        nom = st.text_input("Empleado"); h_t = st.number_input("Horas"); t_h = st.number_input("Tarifa")
+    st.title(t["m_nomina"])
+    with st.form("form_payroll"):
+        emp_nom = st.text_input("Empleado / Employee")
+        hrs_tr = st.number_input("Horas / Hours", min_value=0.0)
+        tar_hr = st.number_input("Tarifa / Rate", min_value=0.0)
         if st.form_submit_button("Registrar Pago"):
-            pago = h_t * t_h
-            df_n = pd.DataFrame([[datetime.now().strftime("%Y-%m-%d"), nom, pago]], columns=["Fecha", "Empleado", "Total"])
-            df_n.to_csv("nomina.csv", mode='a', index=False, header=not os.path.exists("nomina.csv"))
-            st.success(f"Registrado: ${pago}")
-    if os.path.exists("nomina.csv"): st.dataframe(pd.read_csv("nomina.csv"))
+            tot_p = hrs_tr * tar_hr
+            df_p = pd.DataFrame([[datetime.now().strftime("%Y-%m-%d"), emp_nom, tot_p]], columns=["Fecha", "Empleado", "Total"])
+            df_p.to_csv("payroll.csv", mode='a', index=False, header=not os.path.exists("payroll.csv"))
+            st.success(f"Pago de ${tot_p} registrado para {emp_nom}.")
+    if os.path.exists("payroll.csv"): st.dataframe(pd.read_csv("payroll.csv"))
 
 # --- MODULO 5: CATÁLOGO ---
 elif "🛒" in choice:
     st.title(t["menu"][4])
-    cat = [("Tile", "https://www.flooranddecor.com/tile", "tile.jpg.png"), ("Stone", "https://www.flooranddecor.com/stone", "stone.jpg.png"), 
-           ("Wood", "https://www.flooranddecor.com/hardwood", "wood.jpg.png"), ("Laminate", "https://www.flooranddecor.com/laminate", "laminate.jpg.JPG")]
-    for i in range(0, len(cat), 2):
+    items = [("Tile", "https://www.flooranddecor.com/tile", "tile.jpg.png"), 
+             ("Stone", "https://www.flooranddecor.com/stone", "stone.jpg.png"), 
+             ("Wood", "https://www.flooranddecor.com/hardwood", "wood.jpg.png"), 
+             ("Vinyl", "https://www.flooranddecor.com/vinyl", "vinyl.jpg.JPG")]
+    for i in range(0, len(items), 2):
         cols = st.columns(2)
         for j in range(2):
-            if i+j < len(cat):
-                n, l, img = cat[i+j]
+            if i+j < len(items):
+                name, link, img_path = items[i+j]
                 with cols[j]:
-                    if os.path.exists(img): st.image(img)
-                    st.subheader(n); st.link_button(t["ver_mas"], l)
+                    if os.path.exists(img_path): st.image(img_path)
+                    st.subheader(name)
+                    st.link_button(t["ver_mas"], link)
 
 st.sidebar.markdown("---")
 st.sidebar.caption("©️ 2026 JR CRUZ MASONRY LLC")
