@@ -28,7 +28,7 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# --- SISTEMA DE TRADUCCIÓN (CORREGIDO PARA EVITAR KEYERROR) ---
+# --- SISTEMA DE TRADUCCIÓN ---
 idioma = st.sidebar.radio("🌐 Language / Idioma", ["Español", "English"])
 texts = {
     "Español": {
@@ -106,9 +106,9 @@ if "📝" in choice:
         file = "historial_final.csv"
         if not os.path.exists(file): df.to_csv(file, index=False)
         else: df.to_csv(file, mode='a', header=False, index=False)
-        st.success("¡Registro guardado exitosamente!")
+        st.success("¡Registro guardado!")
 
-# --- MODULO 2: HISTORIAL Y EDICIÓN DINÁMICA ---
+# --- MODULO 2: HISTORIAL Y EDICIÓN ---
 elif "📋" in choice:
     st.title(t["menu"][1])
     file = "historial_final.csv"
@@ -117,7 +117,7 @@ elif "📋" in choice:
         st.dataframe(df_h, use_container_width=True)
         
         st.markdown("---")
-        st.subheader("🛠️ Gestionar Pagos por Cliente")
+        st.subheader("🛠️ Actualizar Depósitos")
         sel_c = st.selectbox("Seleccione Cliente", [""] + list(df_h["Cliente"].unique()))
         
         if sel_c != "":
@@ -153,53 +153,57 @@ elif "📋" in choice:
                 pdf.set_font("Arial", "B", 16); pdf.cell(0, 10, "JR CRUZ MASONRY LLC", 0, 1, "C"); pdf.ln(10)
                 pdf.set_font("Arial", "B", 12); pdf.cell(0, 10, f"CLIENTE: {sel_c}", 0, 1)
                 pdf.cell(0, 10, f"FECHA: {datos['Fecha']}", 0, 1); pdf.ln(5)
-                
                 pdf.cell(100, 10, t["total_c"], 1); pdf.cell(90, 10, f"${datos['Total']}", 1, 1, "R")
                 for i, d in enumerate(nuevos_deps):
                     pdf.cell(100, 10, f"{t['dep']} {i+1}", 1); pdf.cell(90, 10, f"${d}", 1, 1, "R")
-                
                 pdf.cell(100, 10, t["total_p"], 1); pdf.cell(90, 10, f"${n_pagado}", 1, 1, "R")
                 pdf.set_text_color(200, 0, 0)
                 pdf.cell(100, 10, t["balance"], 1); pdf.cell(90, 10, f"${n_balance}", 1, 1, "R")
-                
                 out_pdf = f"Recibo_{sel_c}.pdf"
                 pdf.output(out_pdf)
-                with open(out_pdf, "rb") as f: st.download_button("📩 Descargar PDF Actualizado", f, file_name=out_pdf)
+                with open(out_pdf, "rb") as f: st.download_button("📩 Descargar PDF", f, file_name=out_pdf)
 
 # --- MODULO 3: CITAS ---
 elif "📅" in choice:
     st.title(t["m_citas"])
     with st.form("form_citas"):
         fc_cita = st.date_input(t["fecha"])
-        hr_cita = st.time_input("Hora / Time")
+        hr_cita = st.time_input("Hora")
         cl_cita = st.text_input(t["cliente"])
         if st.form_submit_button("Agendar Cita"):
             df_c = pd.DataFrame([[str(fc_cita), str(hr_cita), cl_cita]], columns=["Fecha", "Hora", "Cliente"])
             df_c.to_csv("citas.csv", mode='a', index=False, header=not os.path.exists("citas.csv"))
-            st.success("Cita agendada correctamente.")
+            st.success("Cita guardada.")
     if os.path.exists("citas.csv"): st.dataframe(pd.read_csv("citas.csv"))
 
 # --- MODULO 4: NÓMINA ---
 elif "👥" in choice:
     st.title(t["m_nomina"])
     with st.form("form_payroll"):
-        emp_nom = st.text_input("Empleado / Employee")
-        hrs_tr = st.number_input("Horas / Hours", min_value=0.0)
-        tar_hr = st.number_input("Tarifa / Rate", min_value=0.0)
+        emp_nom = st.text_input("Empleado")
+        hrs_tr = st.number_input("Horas", min_value=0.0)
+        tar_hr = st.number_input("Tarifa", min_value=0.0)
         if st.form_submit_button("Registrar Pago"):
             tot_p = hrs_tr * tar_hr
             df_p = pd.DataFrame([[datetime.now().strftime("%Y-%m-%d"), emp_nom, tot_p]], columns=["Fecha", "Empleado", "Total"])
             df_p.to_csv("payroll.csv", mode='a', index=False, header=not os.path.exists("payroll.csv"))
-            st.success(f"Pago de ${tot_p} registrado para {emp_nom}.")
+            st.success(f"Pago de ${tot_p} registrado.")
     if os.path.exists("payroll.csv"): st.dataframe(pd.read_csv("payroll.csv"))
 
-# --- MODULO 5: CATÁLOGO ---
+# --- MODULO 5: CATÁLOGO (AMPLIADO) ---
 elif "🛒" in choice:
     st.title(t["menu"][4])
-    items = [("Tile", "https://www.flooranddecor.com/tile", "tile.jpg.png"), 
-             ("Stone", "https://www.flooranddecor.com/stone", "stone.jpg.png"), 
-             ("Wood", "https://www.flooranddecor.com/hardwood", "wood.jpg.png"), 
-             ("Vinyl", "https://www.flooranddecor.com/vinyl", "vinyl.jpg.JPG")]
+    # Lista completa de categorías solicitadas
+    items = [
+        ("Tile", "https://www.flooranddecor.com/tile", "tile.jpg.png"), 
+        ("Stone", "https://www.flooranddecor.com/stone", "stone.jpg.png"), 
+        ("Wood", "https://www.flooranddecor.com/hardwood", "wood.jpg.png"), 
+        ("Laminate", "https://www.flooranddecor.com/laminate", "laminate.jpg.JPG"),
+        ("Vinyl", "https://www.flooranddecor.com/vinyl", "vinyl.jpg.JPG"),
+        ("Decoratives", "https://www.flooranddecor.com/decoratives", "decoratives.jpg.jpeg"),
+        ("Fixtures", "https://www.flooranddecor.com/bathroom-fixtures", "fixtures.jpg.png"),
+        ("Materials", "https://www.flooranddecor.com/installation-materials", "materials.jpg.jpeg")
+    ]
     for i in range(0, len(items), 2):
         cols = st.columns(2)
         for j in range(2):
