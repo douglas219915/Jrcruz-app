@@ -14,8 +14,7 @@ def get_base64(file):
             return base64.b64encode(f.read()).decode()
     except: return None
 
-# --- CSS: ESTILOS Y LOGO FONDO ---
-# Corregido: El logo de fondo se aplica correctamente por CSS
+# --- CSS: ESTILOS, LOGO FONDO Y CORRECCIÓN DE IMÁGENES ---
 logo_b64 = get_base64("5104.jpg")
 if logo_b64:
     st.markdown(f"""
@@ -23,6 +22,15 @@ if logo_b64:
         [data-testid="stAppViewContainer"] {{
             background-image: linear-gradient(rgba(255,255,255,0.94), rgba(255,255,255,0.94)), url("data:image/jpg;base64,{logo_b64}");
             background-size: 500px; background-repeat: no-repeat; background-attachment: fixed; background-position: center;
+        }}
+        /* CORRECCIÓN DE CATÁLOGO: Tamaño uniforme para todas las fotos */
+        [data-testid="stImage"] img {{
+            width: 100%;
+            height: 250px; /* Altura fija para todas */
+            object-fit: cover; /* Recorta la imagen para que llene el espacio sin estirarse */
+            border-radius: 12px;
+            border: 1px solid #ddd;
+            box-shadow: 0px 4px 8px rgba(0,0,0,0.1);
         }}
         .stButton>button {{ width: 100%; background-color: #1A4F8B; color: white; border-radius: 8px; font-weight: bold; height: 45px; }}
         h1, h2, h3 {{ color: #1A4F8B; }}
@@ -79,7 +87,6 @@ texts = {
 t = texts[idioma]
 
 def guardar_datos(df, filename):
-    # Corregido: Forzamos el mismo orden de columnas siempre para evitar el ParserError
     if not os.path.isfile(filename):
         df.to_csv(filename, index=False)
     else:
@@ -142,8 +149,6 @@ if "📝" in choice:
     res_c3.markdown(f"<div class='metric-box'><h3>TOTAL ESTIMATE</h3><h2 style='color:#1A4F8B'>${gran_total}</h2></div>", unsafe_allow_html=True)
 
     if st.button(t["btn_pdf"]):
-        # Aseguramos que las columnas coincidan con el CSV existente
-        # Columnas: Fecha, Cliente, Sqft, Total
         nuevo_h = pd.DataFrame([[str(fecha), cliente, total_sqft, gran_total]], columns=["Fecha", "Cliente", "Sqft", "Total"])
         guardar_datos(nuevo_h, "historial.csv")
         
@@ -155,7 +160,6 @@ if "📝" in choice:
         pdf.set_font("Arial", "B", 12); pdf.cell(0, 8, f"Estimate for: {cliente}", 0, 1)
         pdf.set_font("Arial", "", 10); pdf.cell(0, 8, f"Date: {fecha}", 0, 1); pdf.ln(5)
 
-        # Tabla Costos simplificada para el PDF
         pdf.set_fill_color(26, 79, 139); pdf.set_text_color(255, 255, 255)
         pdf.cell(140, 8, "Description", 1, 0, "C", True); pdf.cell(50, 8, "Amount", 1, 1, "C", True)
         pdf.set_text_color(0, 0, 0)
@@ -180,8 +184,7 @@ elif "📅" in choice:
             guardar_datos(pd.DataFrame([[str(f), str(h), c, n]], columns=["Fecha", "Hora", "Cliente", "Notas"]), "citas.csv")
             st.success("Cita guardada!")
     if os.path.exists("citas.csv"): 
-        df_c = pd.read_csv("citas.csv")
-        st.dataframe(df_c, use_container_width=True)
+        st.dataframe(pd.read_csv("citas.csv"), use_container_width=True)
 
 # --- MODULO 3: NÓMINA ---
 elif "👥" in choice:
@@ -199,25 +202,17 @@ elif "📋" in choice:
     tab1, tab2 = st.tabs(["Proyectos/Estimados", "Nómina"])
     with tab1:
         if os.path.exists("historial.csv"): 
-            # Corregido: Si el archivo está corrupto, lo manejamos
             try:
-                df_h = pd.read_csv("historial.csv")
-                st.dataframe(df_h, use_container_width=True)
-                if st.button("Limpiar Historial / Clear History"):
-                    os.remove("historial.csv")
-                    st.rerun()
-            except Exception as e:
-                st.error("El archivo de historial tiene errores de formato.")
-                if st.button("Borrar archivo dañado"):
-                    os.remove("historial.csv")
-                    st.rerun()
+                st.dataframe(pd.read_csv("historial.csv"), use_container_width=True)
+            except:
+                st.error("Error en archivo. Use el botón abajo para resetear.")
+                if st.button("Borrar historial dañado"): os.remove("historial.csv"); st.rerun()
     with tab2:
-        if os.path.exists("nomina.csv"): 
-            st.dataframe(pd.read_csv("nomina.csv"), use_container_width=True)
+        if os.path.exists("nomina.csv"): st.dataframe(pd.read_csv("nomina.csv"), use_container_width=True)
 
 # --- MODULO 5: CATÁLOGO ---
 elif "🛒" in choice:
-    st.title(t["menu"][4])
+    st.title(t["cat_t"])
     items = t["cat_list"]
     for i in range(0, len(items), 2):
         cols = st.columns(2)
@@ -225,7 +220,10 @@ elif "🛒" in choice:
             if i+j < len(items):
                 name, link, img = items[i+j]
                 with cols[j]:
-                    if os.path.exists(img): st.image(img, use_container_width=True)
+                    if os.path.exists(img): 
+                        st.image(img, use_container_width=True)
+                    else:
+                        st.warning(f"File {img} not found")
                     st.subheader(name); st.link_button(t["ver_mas"], link); st.write("")
 
 st.sidebar.markdown("---")
