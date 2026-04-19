@@ -14,7 +14,7 @@ def get_base64(file):
             return base64.b64encode(f.read()).decode()
     except: return None
 
-# --- CSS: ESTILOS, LOGO FONDO Y CORRECCIÓN DE IMÁGENES ---
+# --- CSS: ESTILOS, LOGO FONDO Y BOTONES ---
 logo_b64 = get_base64("5104.jpg")
 if logo_b64:
     st.markdown(f"""
@@ -41,13 +41,19 @@ texts = {
     "Español": {
         "menu": ["📝 Estimado y Pagos", "📅 Citas", "👥 Nómina", "📋 Historial", "🛒 Catálogo"],
         "calc_t": "Estimado y Control de Pagos",
-        "btn_pdf": "Generar PDF de Factura/Estimado",
+        "btn_pdf": "Generar PDF en Español",
         "materiales_t": "Desglose de Trabajo y Materiales",
         "mano_obra": "Mano de Obra (Labor)",
         "desc": "Descripción", "costo": "Costo ($)",
-        "pago_t": "Registro de Pagos del Cliente",
+        "pago_t": "Registro de Pagos",
         "deposito": "Depósito / Adelanto ($)",
         "otros_pagos": "Otros Abonos / Pagos ($)",
+        "balance": "Balance Pendiente",
+        "total_p": "Total Pagado",
+        "total_c": "Total Contrato",
+        "status_p": "PAGADO POR COMPLETO",
+        "status_pen": "BALANCE PENDIENTE",
+        "pdf_desc": "Descripción", "pdf_cant": "Monto",
         "cat_t": "Catálogo Floor & Decor", "ver_mas": "Ver detalles",
         "cat_list": [
             ("Loseta (Tile)", "https://www.flooranddecor.com/tile", "tile.jpg.png"),
@@ -63,13 +69,19 @@ texts = {
     "English": {
         "menu": ["📝 Estimate & Payments", "📅 Appointments", "👥 Payroll", "📋 History", "🛒 Catalog"],
         "calc_t": "Estimate & Payment Control",
-        "btn_pdf": "Generate Invoice/Estimate PDF",
+        "btn_pdf": "Generate PDF in English",
         "materiales_t": "Labor & Materials Breakdown",
         "mano_obra": "Labor Cost",
         "desc": "Description", "costo": "Cost ($)",
-        "pago_t": "Client Payment Record",
+        "pago_t": "Payment Record",
         "deposito": "Deposit / Down Payment ($)",
         "otros_pagos": "Additional Payments ($)",
+        "balance": "Balance Due",
+        "total_p": "Total Paid",
+        "total_c": "Total Contract",
+        "status_p": "PAID IN FULL",
+        "status_pen": "PENDING BALANCE",
+        "pdf_desc": "Description", "pdf_cant": "Amount",
         "cat_t": "Floor & Decor Catalog", "ver_mas": "View details",
         "cat_list": [
             ("Tile", "https://www.flooranddecor.com/tile", "tile.jpg.png"),
@@ -100,22 +112,22 @@ if "📝" in choice:
     with col_c2: fecha = st.date_input("Fecha / Date")
 
     st.markdown("---")
-    st.subheader("1. Áreas y Medidas")
+    st.subheader("1. Áreas y Medidas (Sqft)")
     if 'rows' not in st.session_state: st.session_state['rows'] = 1
     
     cb1, cb2 = st.columns(2)
     with cb1:
-        if st.button("+ Área"): st.session_state['rows'] += 1
+        if st.button("+ Area"): st.session_state['rows'] += 1
     with cb2:
-        if st.button("- Área") and st.session_state['rows'] > 1: st.session_state['rows'] -= 1
+        if st.button("- Area") and st.session_state['rows'] > 1: st.session_state['rows'] -= 1
 
     total_sqft = 0.0
     medidas = []
     for i in range(st.session_state['rows']):
         c1, c2, c3 = st.columns([2, 1, 1])
-        n_a = c1.text_input(f"Área {i+1}", key=f"n_{i}")
-        l = c2.number_input(f"Largo", min_value=0.0, key=f"l_{i}")
-        a = c3.number_input(f"Ancho", min_value=0.0, key=f"a_{i}")
+        n_a = c1.text_input(f"{t['desc']} {i+1}", key=f"n_{i}")
+        l = c2.number_input(f"L (ft)", min_value=0.0, key=f"l_{i}")
+        a = c3.number_input(f"W (ft)", min_value=0.0, key=f"a_{i}")
         sub = round(l * a, 2)
         total_sqft += sub
         medidas.append([n_a, l, a, sub])
@@ -131,8 +143,8 @@ if "📝" in choice:
     total_mat = 0.0
     for j in range(st.session_state['m_rows']):
         cm1, cm2 = st.columns([3, 1])
-        d = cm1.text_input(f"Descripción {j+1}", key=f"md_{j}")
-        v = cm2.number_input(f"Costo $ {j+1}", min_value=0.0, key=f"mv_{j}")
+        d = cm1.text_input(f"{t['desc']} Item {j+1}", key=f"md_{j}")
+        v = cm2.number_input(f"{t['costo']} {j+1}", min_value=0.0, key=f"mv_{j}")
         total_mat += v
         if d: lista_mat.append([d, v])
 
@@ -147,18 +159,17 @@ if "📝" in choice:
     total_pagado = deposito + otros_pagos
     balance_pendiente = total_contrato - total_pagado
 
-    # INDICADORES DE TOTALES
     st.markdown("---")
     res1, res2, res3, res4 = st.columns(4)
-    res1.metric("Total Contrato", f"${total_contrato}")
-    res2.metric("Total Pagado", f"${total_pagado}", delta=f"+{total_pagado}")
-    res3.metric("Balance Pendiente", f"${balance_pendiente}", delta=f"-{balance_pendiente}", delta_color="inverse")
+    res1.metric(t["total_c"], f"${total_contrato}")
+    res2.metric(t["total_p"], f"${total_pagado}")
+    res3.metric(t["balance"], f"${balance_pendiente}")
     
     with res4:
         if balance_pendiente <= 0 and total_contrato > 0:
-            st.markdown(f"<div class='status-paid'>PAID IN FULL / PAGADO</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='status-paid'>{t['status_p']}</div>", unsafe_allow_html=True)
         else:
-            st.markdown(f"<div class='status-pending'>PENDING / PENDIENTE</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='status-pending'>{t['status_pen']}</div>", unsafe_allow_html=True)
 
     if st.button(t["btn_pdf"]):
         guardar_datos(pd.DataFrame([[str(fecha), cliente, total_contrato, total_pagado, balance_pendiente]], 
@@ -166,34 +177,50 @@ if "📝" in choice:
         pdf = FPDF()
         pdf.add_page()
         if os.path.exists("5104.jpg"): pdf.image("5104.jpg", 10, 8, 30)
-        pdf.set_font("Arial", "B", 16); pdf.cell(0, 10, "JR CRUZ MASONRY LLC", 0, 1, "C"); pdf.ln(15)
-        pdf.set_font("Arial", "B", 12); pdf.cell(0, 8, f"Client: {cliente}", 0, 1)
-        pdf.set_font("Arial", "", 10); pdf.cell(0, 8, f"Date: {fecha}", 0, 1); pdf.ln(5)
         
-        # Tabla de Cargos
+        pdf.set_font("Arial", "B", 16); pdf.cell(0, 10, "JR CRUZ MASONRY LLC", 0, 1, "C"); pdf.ln(15)
+        pdf.set_font("Arial", "B", 12); pdf.cell(0, 8, f"{'Client' if idioma=='English' else 'Cliente'}: {cliente}", 0, 1)
+        pdf.set_font("Arial", "", 10); pdf.cell(0, 8, f"{'Date' if idioma=='English' else 'Fecha'}: {fecha}", 0, 1); pdf.ln(5)
+        
+        # Tabla dinámica según idioma
         pdf.set_fill_color(26, 79, 139); pdf.set_text_color(255, 255, 255)
-        pdf.cell(140, 8, "Description", 1, 0, "C", True); pdf.cell(50, 8, "Amount", 1, 1, "C", True)
+        pdf.cell(140, 8, t["pdf_desc"], 1, 0, "C", True); pdf.cell(50, 8, t["pdf_cant"], 1, 1, "C", True)
         pdf.set_text_color(0, 0, 0)
-        pdf.cell(140, 8, "Labor / Mano de Obra", 1); pdf.cell(50, 8, f"${mano_obra}", 1, 1, "R")
+        
+        pdf.cell(140, 8, t["mano_obra"], 1); pdf.cell(50, 8, f"${mano_obra}", 1, 1, "R")
         for m in lista_mat:
             pdf.cell(140, 8, str(m[0]), 1); pdf.cell(50, 8, f"${m[1]}", 1, 1, "R")
         
-        pdf.set_font("Arial", "B", 11)
-        pdf.cell(140, 10, "TOTAL CONTRACT AMOUNT", 1); pdf.cell(50, 10, f"${total_contrato}", 1, 1, "R")
-        pdf.set_text_color(0, 100, 0)
-        pdf.cell(140, 10, "TOTAL PAID TO DATE", 1); pdf.cell(50, 10, f"- ${total_pagado}", 1, 1, "R")
+        pdf.ln(5); pdf.set_font("Arial", "B", 11)
+        pdf.cell(140, 10, t["total_c"], 1); pdf.cell(50, 10, f"${total_contrato}", 1, 1, "R")
+        pdf.set_text_color(0, 120, 0)
+        pdf.cell(140, 10, t["total_p"], 1); pdf.cell(50, 10, f"- ${total_pagado}", 1, 1, "R")
         pdf.set_text_color(200, 0, 0)
-        pdf.cell(140, 10, "BALANCE DUE", 1); pdf.cell(50, 10, f"${balance_pendiente}", 1, 1, "R")
+        pdf.cell(140, 10, t["balance"], 1); pdf.cell(50, 10, f"${balance_pendiente}", 1, 1, "R")
         
         if balance_pendiente <= 0:
             pdf.ln(5); pdf.set_text_color(0, 128, 0); pdf.set_font("Arial", "B", 14)
-            pdf.cell(0, 10, "STATUS: PAID IN FULL", 0, 1, "C")
+            pdf.cell(0, 10, t["status_p"], 0, 1, "C")
 
         p_f = f"Invoice_{cliente}.pdf"
         pdf.output(p_f)
-        with open(p_f, "rb") as f: st.download_button("📩 Download Invoice/PDF", f, file_name=p_f)
+        with open(p_f, "rb") as f: st.download_button(f"📩 {t['btn_pdf']}", f, file_name=p_f)
 
-# --- MODULOS RESTANTES (SE MANTIENEN IGUAL) ---
+# --- MODULO 4: HISTORIAL ACTUALIZADO ---
+elif "📋" in choice:
+    st.title(t["menu"][3])
+    t1, t2 = st.tabs([t["menu"][0], t["menu"][2]])
+    with t1:
+        if os.path.exists("historial.csv"):
+            df_hist = pd.read_csv("historial.csv")
+            # Cambiamos nombres de columnas para que coincidan con el idioma
+            df_hist.columns = ["Fecha", "Cliente", t["total_c"], t["total_p"], t["balance"]]
+            st.dataframe(df_hist, use_container_width=True)
+            if st.button("Reset Historial"): os.remove("historial.csv"); st.rerun()
+    with t2:
+        if os.path.exists("nomina.csv"): st.dataframe(pd.read_csv("nomina.csv"), use_container_width=True)
+
+# --- OTROS MODULOS (Sin cambios) ---
 elif "📅" in choice:
     st.title(t["menu"][1])
     with st.form("f_c"):
@@ -211,14 +238,6 @@ elif "👥" in choice:
             tot = hrs * pag
             guardar_datos(pd.DataFrame([[str(datetime.now().date()), nom, tot]], columns=["Fecha", "Empleado", "Total"]), "nomina.csv")
             st.info(f"Total: ${tot}")
-
-elif "📋" in choice:
-    st.title(t["menu"][3])
-    t1, t2 = st.tabs(["Estimados/Pagos", "Nómina"])
-    with t1:
-        if os.path.exists("historial.csv"): st.dataframe(pd.read_csv("historial.csv"), use_container_width=True)
-    with t2:
-        if os.path.exists("nomina.csv"): st.dataframe(pd.read_csv("nomina.csv"), use_container_width=True)
 
 elif "🛒" in choice:
     st.title(t["cat_t"])
