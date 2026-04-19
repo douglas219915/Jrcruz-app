@@ -7,13 +7,12 @@ import base64
 # 1. Configuración de página
 st.set_page_config(page_title="JR CRUZ MASONRY LLC", page_icon="🏗️", layout="wide")
 
-# Función para preparar la imagen de fondo
+# Función para el logo de fondo
 def get_base64(file):
     with open(file, "rb") as f:
-        data = f.read()
-    return base64.b64encode(data).decode()
+        return base64.b64encode(f.read()).decode()
 
-# --- CSS PARA LOGO SOMBREADO Y DISEÑO ---
+# --- CSS: LOGO SOMBREADO Y ESTILOS ---
 if os.path.exists("5104.jpg"):
     bin_str = get_base64("5104.jpg")
     st.markdown(f"""
@@ -31,83 +30,120 @@ if os.path.exists("5104.jpg"):
         </style>
     """, unsafe_allow_html=True)
 
-# --- LÓGICA DE DATOS ---
-def guardar_datos(df, filename):
-    if not os.path.isfile(filename): df.to_csv(filename, index=False)
-    else: df.to_csv(filename, mode='a', header=False, index=False)
+# --- DICCIONARIO COMPLETO DE TRADUCCIONES ---
+idioma = st.sidebar.radio("🌐 Language / Idioma", ["Español", "English"])
 
-# --- MENÚ LATERAL ---
-idioma = st.sidebar.radio("🌐 Idioma", ["Español", "English"])
-menu_options = {
-    "Español": ["📊 Calculadora", "👥 Nómina", "📋 Historial", "📸 Fotos", "🛒 Catálogo"],
-    "English": ["📊 Calculator", "👥 Payroll", "📋 History", "📸 Photos", "🛒 Catalog"]
+texts = {
+    "Español": {
+        "menu": ["📊 Calculadora", "👥 Nómina", "📋 Historial", "📸 Fotos", "🛒 Catálogo"],
+        "calc_t": "Calculadora de Área",
+        "nom_t": "Nómina Semanal",
+        "hist_t": "Historial de Registros",
+        "foto_t": "Galería de Obra",
+        "cat_t": "Catálogo Floor & Decor",
+        "cliente": "Nombre del Cliente",
+        "largo": "Largo (ft)",
+        "ancho": "Ancho (ft)",
+        "btn_guardar": "Calcular y Guardar",
+        "trabajador": "Nombre del Trabajador",
+        "horas": "Horas Trabajadas",
+        "pago": "Pago por Hora",
+        "btn_pago": "Registrar Pago",
+        "ver_mas": "Ver en Floor & Decor",
+        "cat_list": [
+            ("Loseta (Tile)", "https://www.flooranddecor.com/tile", "tile.jpg.png"),
+            ("Piedra (Stone)", "https://www.flooranddecor.com/stone", "stone.jpg.png"),
+            ("Madera (Wood)", "https://www.flooranddecor.com/hardwood", "wood.jpg.png"),
+            ("Laminado (Laminate)", "https://www.flooranddecor.com/laminate", "laminate.jpg.JPG")
+        ]
+    },
+    "English": {
+        "menu": ["📊 Calculator", "👥 Payroll", "📋 History", "📸 Photos", "🛒 Catalog"],
+        "calc_t": "Area Calculator",
+        "nom_t": "Weekly Payroll",
+        "hist_t": "Record History",
+        "foto_t": "Work Gallery",
+        "cat_t": "Floor & Decor Catalog",
+        "cliente": "Client Name",
+        "largo": "Length (ft)",
+        "ancho": "Width (ft)",
+        "btn_guardar": "Calculate & Save",
+        "trabajador": "Employee Name",
+        "horas": "Hours Worked",
+        "pago": "Pay per Hour",
+        "btn_pago": "Register Payment",
+        "ver_mas": "View at Floor & Decor",
+        "cat_list": [
+            ("Tile", "https://www.flooranddecor.com/tile", "tile.jpg.png"),
+            ("Stone", "https://www.flooranddecor.com/stone", "stone.jpg.png"),
+            ("Wood", "https://www.flooranddecor.com/hardwood", "wood.jpg.png"),
+            ("Laminate", "https://www.flooranddecor.com/laminate", "laminate.jpg.JPG")
+        ]
+    }
 }
-choice = st.sidebar.selectbox("Seleccione una opción", menu_options[idioma])
 
-# --- MÓDULOS PRINCIPALES ---
+t = texts[idioma]
+
+# --- LÓGICA DE DATOS ---
+def guardar(df, file):
+    if not os.path.isfile(file): df.to_csv(file, index=False)
+    else: df.to_csv(file, mode='a', header=False, index=False)
+
+# --- NAVEGACIÓN ---
+choice = st.sidebar.selectbox("Menu", t["menu"])
 
 # 1. CALCULADORA
 if "📊" in choice:
-    st.title("📊 Calculadora de Área")
-    with st.form("calc_form"):
-        cliente = st.text_input("Nombre del Proyecto/Cliente")
-        col1, col2 = st.columns(2)
-        with col1: largo = st.number_input("Largo (ft)", min_value=0.0)
-        with col2: ancho = st.number_input("Ancho (ft)", min_value=0.0)
-        if st.form_submit_button("Calcular y Guardar"):
-            total = round(largo * ancho, 2)
-            nuevo = pd.DataFrame([[datetime.now().strftime("%Y-%m-%d"), cliente, total]], columns=["Fecha", "Cliente", "Sqft"])
-            guardar_datos(nuevo, "historial.csv")
-            st.success(f"Total: {total} sqft")
+    st.title(t["calc_t"])
+    with st.form("calc"):
+        c = st.text_input(t["cliente"])
+        l = st.number_input(t["largo"], min_value=0.0)
+        a = st.number_input(t["ancho"], min_value=0.0)
+        if st.form_submit_button(t["btn_guardar"]):
+            res = round(l * a, 2)
+            guardar(pd.DataFrame([[datetime.now().date(), c, res]], columns=["Fecha", "Cliente", "Sqft"]), "historial.csv")
+            st.success(f"Total: {res} sqft")
 
 # 2. NÓMINA
 elif "👥" in choice:
-    st.title("👥 Nómina Semanal")
-    with st.form("nomina_form"):
-        nombre = st.text_input("Nombre del Trabajador")
-        h = st.number_input("Horas", min_value=0.0)
-        p = st.number_input("Pago por Hora", min_value=0.0)
-        if st.form_submit_button("Registrar Pago"):
-            total_pago = h * p
-            nuevo_p = pd.DataFrame([[datetime.now().strftime("%Y-%m-%d"), nombre, total_pago]], columns=["Fecha", "Empleado", "Total"])
-            guardar_datos(nuevo_p, "nomina.csv")
-            st.info(f"Total a pagar: ${total_pago}")
+    st.title(t["nom_t"])
+    with st.form("nom"):
+        n = st.text_input(t["trabajador"])
+        h = st.number_input(t["horas"], min_value=0.0)
+        p = st.number_input(t["pago"], min_value=0.0)
+        if st.form_submit_button(t["btn_pago"]):
+            tot = h * p
+            guardar(pd.DataFrame([[datetime.now().date(), n, tot]], columns=["Fecha", "Empleado", "Total"]), "nomina.csv")
+            st.info(f"Total: ${tot}")
 
 # 3. HISTORIAL
 elif "📋" in choice:
-    st.title("📋 Historial de Registros")
-    if os.path.exists("historial.csv"):
-        st.subheader("Proyectos")
+    st.title(t["hist_t"])
+    if os.path.exists("historial.csv"): 
+        st.subheader("Projects / Proyectos")
         st.dataframe(pd.read_csv("historial.csv"), use_container_width=True)
-    if os.path.exists("nomina.csv"):
-        st.subheader("Nómina")
+    if os.path.exists("nomina.csv"): 
+        st.subheader("Payroll / Nómina")
         st.dataframe(pd.read_csv("nomina.csv"), use_container_width=True)
 
 # 4. FOTOS
 elif "📸" in choice:
-    st.title("📸 Galería de Obra")
-    archivo = st.file_uploader("Subir foto de progreso", type=["jpg", "png", "jpeg"])
-    if archivo: st.image(archivo, use_container_width=True)
+    st.title(t["foto_t"])
+    f = st.file_uploader("Upload / Subir", type=["jpg", "png", "jpeg"])
+    if f: st.image(f, use_container_width=True)
 
 # 5. CATÁLOGO
 elif "🛒" in choice:
-    st.title("🛒 Catálogo Floor & Decor")
-    # Nombres exactos de tus archivos en GitHub
-    cat = [
-        ("Tile", "https://www.flooranddecor.com/tile", "tile.jpg.png"),
-        ("Stone", "https://www.flooranddecor.com/stone", "stone.jpg.png"),
-        ("Wood", "https://www.flooranddecor.com/hardwood", "wood.jpg.png"),
-        ("Laminate", "https://www.flooranddecor.com/laminate", "laminate.jpg.JPG")
-    ]
-    for i in range(0, len(cat), 2):
+    st.title(t["cat_t"])
+    for i in range(0, len(t["cat_list"]), 2):
         cols = st.columns(2)
         for j in range(2):
-            if i+j < len(cat):
-                n, l, img = cat[i+j]
+            if i+j < len(t["cat_list"]):
+                name, link, img = t["cat_list"][i+j]
                 with cols[j]:
                     if os.path.exists(img): st.image(img, use_container_width=True)
-                    st.subheader(n)
-                    st.link_button(f"Ver {n}", l)
+                    st.subheader(name)
+                    st.link_button(t["ver_mas"], link)
 
 st.sidebar.markdown("---")
 st.sidebar.caption("©️ 2026 JR CRUZ MASONRY LLC")
