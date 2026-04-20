@@ -8,8 +8,6 @@ from fpdf import FPDF
 
 # 1. CONFIGURACIÓN E INICIO DE CONEXIÓN
 st.set_page_config(page_title="JR CRUZ MASONRY LLC", page_icon="🏗️", layout="wide")
-
-# CONEXIÓN A GOOGLE SHEETS (Basada en tus Secrets configurados)
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_base64(file):
@@ -29,12 +27,7 @@ st.markdown(f"""
     }}
     .stButton>button {{ width: 100%; background-color: #1A4F8B; color: white; border-radius: 8px; font-weight: bold; height: 45px; }}
     h1, h2, h3 {{ color: #1A4F8B; }}
-    [data-testid="stImage"] img {{
-        width: 100% !important;
-        height: 280px !important;
-        object-fit: cover !important;
-        border-radius: 12px;
-    }}
+    [data-testid="stImage"] img {{ width: 100% !important; height: 280px !important; object-fit: cover !important; border-radius: 12px; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -46,22 +39,16 @@ texts = {
         "cliente": "Cliente", "fecha": "Fecha", "desc": "Descripción", "largo": "Largo (ft)", "ancho": "Ancho (ft)",
         "mano_obra": "Mano de Obra", "costo": "Costo ($)", "item": "Artículo", "dep": "Depósito",
         "total_c": "Total Contrato", "total_p": "Total Pagado", "balance": "Balance Pendiente",
-        "btn_save": "Guardar en Google Drive", "btn_edit": "Actualizar Pagos en Drive", "btn_pdf": "Descargar Recibo PDF",
-        "ver_mas": "Ver detalles", "m_citas": "Módulo de Citas", "m_nomina": "Módulo de Nómina",
-        "hora": "Hora", "agendar": "Agendar Cita", "empleado": "Empleado", "horas": "Horas Trabajadas",
-        "tarifa": "Tarifa por Hora", "reg_pago": "Registrar Pago", "seleccione": "Seleccione Cliente",
-        "agregar_celda": "+ Agregar Celda de Depósito", "exito": "¡Guardado!", "cambios": "¡Actualizado!"
+        "btn_save": "Guardar en Drive", "btn_edit": "Actualizar Pagos en Drive", "btn_pdf": "Descargar PDF",
+        "ver_mas": "Ver detalles", "exito": "¡Guardado!", "cambios": "¡Actualizado!"
     },
     "English": {
         "menu": ["📝 New Estimate", "📋 History & Payments", "📅 Appointments", "👥 Payroll", "🛒 Catalog"],
         "cliente": "Client", "fecha": "Date", "desc": "Description", "largo": "Length (ft)", "ancho": "Width (ft)",
         "mano_obra": "Labor Cost", "costo": "Cost ($)", "item": "Item", "dep": "Deposit",
         "total_c": "Total Contract", "total_p": "Total Paid", "balance": "Balance Due",
-        "btn_save": "Save to Google Drive", "btn_edit": "Update Payments in Drive", "btn_pdf": "Download Receipt PDF",
-        "ver_mas": "View details", "m_citas": "Appointments Module", "m_nomina": "Payroll Module",
-        "hora": "Time", "agendar": "Schedule Appointment", "empleado": "Employee", "horas": "Hours Worked",
-        "tarifa": "Hourly Rate", "reg_pago": "Register Payment", "seleccione": "Select Client",
-        "agregar_celda": "+ Add Deposit Cell", "exito": "Saved!", "cambios": "Updated!"
+        "btn_save": "Save to Drive", "btn_edit": "Update in Drive", "btn_pdf": "Download PDF",
+        "ver_mas": "View details", "exito": "Saved!", "cambios": "Updated!"
     }
 }
 t = texts[idioma]
@@ -104,115 +91,76 @@ if "📝" in choice:
     bal = total_c - total_p
 
     if st.button(t["btn_save"]):
-        d_str = ";".join(map(str, lista_deps))
-        df_new = pd.DataFrame([[str(fec), cliente, total_c, d_str, total_p, bal]], 
-                             columns=["Fecha", "Cliente", "Total", "Depositos", "Pagado", "Balance"])
         try:
             df_h = conn.read(worksheet="Estimados").astype(str)
-            df_final = pd.concat([df_h, df_new.astype(str)], ignore_index=True)
+            d_str = ";".join(map(str, lista_deps))
+            # CAMBIADO "Paradox" a "Pagado"
+            df_new = pd.DataFrame([[str(fec), cliente, str(total_c), d_str, str(total_p), str(bal)]], 
+                                 columns=["Fecha", "Cliente", "Total", "Depositos", "Pagado", "Balance"])
+            df_final = pd.concat([df_h, df_new], ignore_index=True)
             conn.update(worksheet="Estimados", data=df_final)
             st.success(t["exito"])
-        except Exception as e:
-            st.error(f"Error de conexión: Asegúrate de que la hoja 'Estimados' exista en tu Drive.")
+        except: st.error("Error al guardar. Revisa que el archivo sea 'Editor'.")
 
 # --- MODULO 2: HISTORIAL Y PAGOS ---
 elif "📋" in choice:
     st.title(t["menu"][1])
     try:
-        df_h = conn.read(worksheet="Estimados").astype(str)
+        df_h = conn.read(worksheet="Estimados", ttl=0).astype(str)
         st.dataframe(df_h, use_container_width=True)
         
-        st.markdown("---")
-        sel_c = st.selectbox(t["seleccione"], [""] + list(df_h["Cliente"].unique()))
-        
+        sel_c = st.selectbox("Seleccione Cliente", [""] + list(df_h["Cliente"].unique()))
         if sel_c != "":
             idx = df_h[df_h["Cliente"] == sel_c].index[-1]
             val_total = float(df_h.loc[idx, "Total"])
-            deps_list = [float(d) for d in str(df_h.loc[idx, "Depositos"]).split(";") if d and d != 'nan']
             
-            if 'edit_count' not in st.session_state: st.session_state['edit_count'] = len(deps_list)
-            if st.button(t["agregar_celda"]): st.session_state['edit_count'] += 1
-            
-            nuevos_val_deps = []
-            for i in range(st.session_state['edit_count']):
-                d_def = deps_list[i] if i < len(deps_list) else 0.0
-                v = st.number_input(f"{t['dep']} {i+1}", value=float(d_def), key=f"ed_{i}")
-                nuevos_val_deps.append(v)
-            
-            n_p = sum(nuevos_val_deps)
-            n_b = val_total - n_p
+            # CAMBIADO "Paradox" a "Pagado"
+            monto_actual = float(df_h.loc[idx, "Pagado"]) if df_h.loc[idx, "Pagado"] != "nan" else 0.0
+            nuevo_pago = st.number_input("Actualizar Pago Total ($)", value=monto_actual)
             
             if st.button(t["btn_edit"]):
-                # SOLUCIÓN AL TYPEERROR: Forzar tipo objeto antes de la asignación
-                df_h["Depositos"] = df_h["Depositos"].astype(object)
-                df_h.at[idx, "Depositos"] = ";".join(map(str, nuevos_val_deps))
-                df_h.at[idx, "Pagado"] = str(n_p)
-                df_h.at[idx, "Balance"] = str(n_b)
+                # CAMBIADO "Paradox" a "Pagado"
+                df_h.at[idx, "Pagado"] = str(nuevo_pago)
+                df_h.at[idx, "Balance"] = str(val_total - nuevo_pago)
                 conn.update(worksheet="Estimados", data=df_h)
                 st.success(t["cambios"])
                 st.rerun()
+    except: st.error("No se pudo conectar. Revisa Compartir -> Editor.")
 
-            if st.button(t["btn_pdf"]):
-                pdf = FPDF()
-                pdf.add_page()
-                if os.path.exists("5104.jpg"): pdf.image("5104.jpg", 10, 8, 30)
-                pdf.set_font("Arial", "B", 16); pdf.cell(0, 10, "JR CRUZ MASONRY LLC", 0, 1, "C"); pdf.ln(10)
-                pdf.set_font("Arial", "B", 12)
-                pdf.cell(0, 10, f"{t['cliente'].upper()}: {sel_c}", 0, 1)
-                pdf.cell(0, 10, f"{t['total_c']}: ${val_total}", 0, 1)
-                for i, d in enumerate(nuevos_val_deps):
-                    pdf.cell(0, 10, f"{t['dep']} {i+1}: ${d}", 0, 1)
-                pdf.set_text_color(200, 0, 0)
-                pdf.cell(0, 10, f"{t['balance']}: ${n_b}", 0, 1)
-                name_pdf = f"Recibo_{sel_c}.pdf"
-                pdf.output(name_pdf)
-                with open(name_pdf, "rb") as f: st.download_button(f"📩 {t['btn_pdf']}", f, file_name=name_pdf)
-    except:
-        st.error("Error de conexión con Google Sheets. Revisa tus permisos.")
-
-# --- MODULOS: CITAS Y NÓMINA ---
+# --- MODULO 3: CITAS ---
 elif "📅" in choice:
-    st.title(t["m_citas"])
+    st.title(t["menu"][2])
     with st.form("c"):
-        f = st.date_input(t["fecha"]); hr = st.time_input(t["hora"]); cl = st.text_input(t["cliente"])
-        if st.form_submit_button(t["agendar"]):
+        f = st.date_input("Fecha"); hr = st.time_input("Hora"); cl = st.text_input("Cliente")
+        if st.form_submit_button("Agendar"):
             try:
                 df_c = conn.read(worksheet="Citas").astype(str)
                 n_c = pd.DataFrame([[str(f), str(hr), cl]], columns=["Fecha", "Hora", "Cliente"])
-                conn.update(worksheet="Citas", data=pd.concat([df_c, n_c.astype(str)], ignore_index=True))
-                st.success(t["exito"])
-            except: st.error("Crea la pestaña 'Citas' en tu Drive.")
-    try: st.dataframe(conn.read(worksheet="Citas"))
-    except: pass
+                conn.update(worksheet="Citas", data=pd.concat([df_c, n_c], ignore_index=True))
+                st.success("Cita guardada")
+            except: st.error("Crea la pestaña 'Citas' en Drive")
 
+# --- MODULO 4: NÓMINA ---
 elif "👥" in choice:
-    st.title(t["m_nomina"])
+    st.title(t["menu"][3])
     with st.form("p"):
-        em = st.text_input(t["empleado"]); hrs = st.number_input(t["horas"]); r = st.number_input(t["tarifa"])
-        if st.form_submit_button(t["reg_pago"]):
+        em = st.text_input("Empleado"); hrs = st.number_input("Horas"); r = st.number_input("Tarifa")
+        if st.form_submit_button("Registrar"):
             try:
                 tot = hrs * r
                 df_n = conn.read(worksheet="Nomina").astype(str)
                 n_n = pd.DataFrame([[datetime.now().strftime("%Y-%m-%d"), em, str(tot)]], columns=["Fecha", "Empleado", "Total"])
-                conn.update(worksheet="Nomina", data=pd.concat([df_n, n_n.astype(str)], ignore_index=True))
-                st.success(f"{t['exito']} ${tot}")
-            except: st.error("Crea la pestaña 'Nomina' en tu Drive.")
-    try: st.dataframe(conn.read(worksheet="Nomina"))
-    except: pass
+                conn.update(worksheet="Nomina", data=pd.concat([df_n, n_n], ignore_index=True))
+                st.success(f"Registrado: ${tot}")
+            except: st.error("Crea la pestaña 'Nomina' en Drive")
 
 # --- CATÁLOGO ---
 elif "🛒" in choice:
     st.title(t["menu"][4])
-    cat = [
-        ("Tile", "https://www.flooranddecor.com/tile", "tile.jpg.png"), 
-        ("Stone", "https://www.flooranddecor.com/stone", "stone.jpg.png"), 
-        ("Wood", "https://www.flooranddecor.com/hardwood", "wood.jpg.png"), 
-        ("Laminate", "https://www.flooranddecor.com/laminate", "laminate.jpg.JPG"),
-        ("Vinyl", "https://www.flooranddecor.com/vinyl", "vinyl.jpg.JPG"),
-        ("Decoratives", "https://www.flooranddecor.com/decoratives", "decoratives.jpg.jpeg"),
-        ("Fixtures", "https://www.flooranddecor.com/bathroom-fixtures", "fixtures.jpg.png"),
-        ("Materials", "https://www.flooranddecor.com/installation-materials", "materials.jpg.jpeg")
-    ]
+    cat = [("Tile", "https://www.flooranddecor.com/tile", "tile.jpg.png"), 
+           ("Stone", "https://www.flooranddecor.com/stone", "stone.jpg.png"), 
+           ("Wood", "https://www.flooranddecor.com/hardwood", "wood.jpg.png"), 
+           ("Laminate", "https://www.flooranddecor.com/laminate", "laminate.jpg.JPG")]
     for i in range(0, len(cat), 2):
         cs = st.columns(2)
         for j in range(2):
@@ -222,5 +170,4 @@ elif "🛒" in choice:
                     if os.path.exists(img): st.image(img)
                     st.subheader(n); st.link_button(t["ver_mas"], l)
 
-st.sidebar.markdown("---")
 st.sidebar.caption("©️ 2026 JR CRUZ MASONRY LLC")
