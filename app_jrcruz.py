@@ -1,12 +1,10 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
-from datetime import datetime
 import os
 import base64
-from fpdf import FPDF
 
-# 1. CONFIGURACIÓN
+# CONFIGURACIÓN DE LA PÁGINA
 st.set_page_config(page_title="JR CRUZ MASONRY LLC", page_icon="🏗️", layout="wide")
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -16,7 +14,7 @@ def get_base64(file):
             return base64.b64encode(f.read()).decode()
     except: return None
 
-# --- ESTILOS ---
+# --- ESTILOS VISUALES ---
 logo_b64 = get_base64("5104.jpg")
 st.markdown(f"""
     <style>
@@ -25,121 +23,97 @@ st.markdown(f"""
         {f', url("data:image/jpg;base64,{logo_b64}")' if logo_b64 else ""};
         background-size: 400px; background-repeat: no-repeat; background-attachment: fixed; background-position: center;
     }}
-    .stButton>button {{ width: 100%; background-color: #1A4F8B; color: white; border-radius: 8px; font-weight: bold; height: 45px; }}
+    .stButton>button {{ width: 100%; background-color: #1A4F8B; color: white; border-radius: 8px; font-weight: bold; }}
     </style>
 """, unsafe_allow_html=True)
 
-# --- TRADUCCIONES ---
-idioma = st.sidebar.radio("🌐 Language / Idioma", ["Español", "English"])
-texts = {
-    "Español": {
-        "menu": ["📝 Nuevo Estimado", "📋 Historial y Pagos", "📅 Citas", "👥 Nómina", "🛒 Catálogo"],
-        "cliente": "Cliente", "fecha": "Fecha", "desc": "Descripción", "largo": "Largo (ft)", "ancho": "Ancho (ft)",
-        "mano_obra": "Mano de Obra", "costo": "Costo ($)", "item": "Artículo", "dep": "Depósito",
-        "total_c": "Total Contrato", "total_p": "Total Pagado", "balance": "Balance Pendiente",
-        "btn_save": "Guardar en Google Drive", "btn_edit": "Actualizar Pagos", "btn_pdf": "Descargar PDF",
-        "ver_mas": "Ver detalles", "exito": "¡Guardado!", "cambios": "¡Actualizado!"
-    },
-    "English": {
-        "menu": ["📝 New Estimate", "📋 History & Payments", "📅 Appointments", "👥 Payroll", "🛒 Catalog"],
-        "cliente": "Client", "fecha": "Date", "desc": "Description", "largo": "Length (ft)", "ancho": "Width (ft)",
-        "mano_obra": "Labor Cost", "costo": "Cost ($)", "item": "Item", "dep": "Deposit",
-        "total_c": "Total Contract", "total_p": "Total Paid", "balance": "Balance Due",
-        "btn_save": "Save to Drive", "btn_edit": "Update Payments", "btn_pdf": "Download PDF",
-        "ver_mas": "View details", "exito": "Saved!", "cambios": "Updated!"
-    }
-}
-t = texts[idioma]
-choice = st.sidebar.selectbox("Panel", t["menu"])
+# --- MENÚ DE NAVEGACIÓN ---
+menu = ["📝 Nuevo Estimado", "📋 Historial y Pagos", "📅 Citas", "👥 Nómina", "🛒 Catálogo"]
+choice = st.sidebar.selectbox("Seleccione una opción", menu)
 
-# --- MODULO 1: ESTIMADOS ---
-if "📝" in choice:
-    st.title(t["menu"][0])
-    c1, c2 = st.columns(2)
-    cliente = c1.text_input(t["cliente"])
-    fec = c2.date_input(t["fecha"])
-    
-    if 'rows' not in st.session_state: st.session_state['rows'] = 1
-    if st.button("+ Area"): st.session_state['rows'] += 1
-    for i in range(st.session_state['rows']):
-        ca1, ca2, ca3 = st.columns([2, 1, 1])
-        ca1.text_input(f"{t['desc']} {i+1}", key=f"n_{i}")
-        ca2.number_input(t["largo"], min_value=0.0, key=f"l_{i}")
-        ca3.number_input(t["ancho"], min_value=0.0, key=f"a_{i}")
-    
-    mano_obra = st.number_input(t["mano_obra"], min_value=0.0)
-    if 'm_rows' not in st.session_state: st.session_state['m_rows'] = 1
-    if st.button("+ Item"): st.session_state['m_rows'] += 1
-    total_mat = 0.0
-    for j in range(st.session_state['m_rows']):
-        cm1, cm2 = st.columns([3, 1])
-        cm1.text_input(f"{t['item']} {j+1}", key=f"md_{j}")
-        v_mat = cm2.number_input(f"{t['costo']} {j+1}", min_value=0.0, key=f"mv_{j}")
-        total_mat += v_mat
+# --- 1. NUEVO ESTIMADO ---
+if "Nuevo" in choice:
+    st.title("Nuevo Estimado")
+    with st.form("form_estimado"):
+        col1, col2 = st.columns(2)
+        cliente = col1.text_input("Nombre del Cliente")
+        fecha = col2.date_input("Fecha")
+        total = st.number_input("Total del Contrato ($)", min_value=0.0)
+        
+        if st.form_submit_button("Guardar en Drive"):
+            try:
+                df = conn.read(worksheet="Estimados", ttl=0).astype(str)
+                # Columnas exactas: Fecha, Cliente, Total, Depositos, Pagado, Balance
+                nueva_fila = pd.DataFrame([[str(fecha), cliente, str(total), "0", "0", str(total)]], 
+                                         columns=["Fecha", "Cliente", "Total", "Depositos", "Pagado", "Balance"])
+                df_final = pd.concat([df, nueva_fila], ignore_index=True)
+                conn.update(worksheet="Estimados", data=df_final)
+                st.success("✅ Estimado guardado correctamente.")
+            except Exception as e:
+                st.error(f"Error al conectar: Revisa que la pestaña se llame 'Estimados'.")
 
-    if 'dep_rows' not in st.session_state: st.session_state['dep_rows'] = 1
-    if st.button("+ " + t["dep"]): st.session_state['dep_rows'] += 1
-    lista_deps = []
-    for k in range(st.session_state['dep_rows']):
-        v_dep = st.number_input(f"{t['dep']} {k+1}", min_value=0.0, key=f"dv_{k}")
-        lista_deps.append(v_dep)
-
-    total_c = float(mano_obra + total_mat)
-    total_p = float(sum(lista_deps))
-    bal = total_c - total_p
-
-    if st.button(t["btn_save"]):
-        try:
-            df_h = conn.read(worksheet="Estimados").astype(str)
-            d_str = ";".join(map(str, lista_deps))
-            df_new = pd.DataFrame([[str(fec), cliente, str(total_c), d_str, str(total_p), str(bal)]], 
-                                 columns=["Fecha", "Cliente", "Total", "Depositos", "Pagado", "Balance"])
-            conn.update(worksheet="Estimados", data=pd.concat([df_h, df_new], ignore_index=True))
-            st.success(t["exito"])
-        except: st.error("Error al guardar. Revisa que el enlace sea correcto y la hoja sea 'Editor'.")
-
-# --- MODULO 2: HISTORIAL (REFORZADO) ---
-elif "📋" in choice:
-    st.title(t["menu"][1])
+# --- 2. HISTORIAL Y PAGOS ---
+elif "Historial" in choice:
+    st.title("Historial y Pagos")
     try:
         df_h = conn.read(worksheet="Estimados", ttl=0).astype(str)
         st.dataframe(df_h, use_container_width=True)
-        sel_c = st.selectbox("Seleccione Cliente", [""] + list(df_h["Cliente"].unique()))
-        if sel_c != "":
-            idx = df_h[df_h["Cliente"] == sel_c].index[-1]
-            val_total = float(df_h.loc[idx, "Total"])
-            nuevo_pago = st.number_input("Actualizar Pago Total ($)", value=float(df_h.loc[idx, "Pagado"]))
-            if st.button(t["btn_edit"]):
+        
+        cliente_sel = st.selectbox("Seleccione Cliente para actualizar pago", [""] + list(df_h["Cliente"].unique()))
+        if cliente_sel != "":
+            idx = df_h[df_h["Cliente"] == cliente_sel].index[-1]
+            total_val = float(df_h.at[idx, "Total"])
+            pagado_actual = float(df_h.at[idx, "Pagado"]) if df_h.at[idx, "Pagado"] != 'nan' else 0.0
+            
+            nuevo_pago = st.number_input("Monto Pagado Total ($)", value=pagado_actual)
+            
+            if st.button("Actualizar Pago"):
                 df_h.at[idx, "Pagado"] = str(nuevo_pago)
-                df_h.at[idx, "Balance"] = str(val_total - nuevo_pago)
+                df_h.at[idx, "Balance"] = str(total_val - nuevo_pago)
                 conn.update(worksheet="Estimados", data=df_h)
-                st.success(t["cambios"]); st.rerun()
-    except: st.error("Fallo de conexión. Verifica que el archivo en Drive esté compartido como 'Editor'.")
+                st.success("✅ Pago actualizado.")
+                st.rerun()
+    except:
+        st.error("❌ Error de conexión. Revisa que el Excel tenga las columnas: Fecha, Cliente, Total, Depositos, Pagado, Balance.")
 
-# --- MODULOS EXTRA ---
-elif "📅" in choice:
-    st.title("Citas")
-    with st.form("c"):
-        f = st.date_input("Fecha"); hr = st.time_input("Hora"); cl = st.text_input("Cliente")
-        if st.form_submit_button("Agendar"):
-            df_c = conn.read(worksheet="Citas").astype(str)
-            n_c = pd.DataFrame([[str(f), str(hr), cl]], columns=["Fecha", "Hora", "Cliente"])
-            conn.update(worksheet="Citas", data=pd.concat([df_c, n_c], ignore_index=True))
-            st.success("Cita guardada")
+# --- 3. CITAS ---
+elif "Citas" in choice:
+    st.title("Calendario de Citas")
+    try:
+        df_c = conn.read(worksheet="Citas", ttl=0).astype(str)
+        st.table(df_c)
+        with st.expander("Agendar Nueva Cita"):
+            f = st.date_input("Fecha Cita")
+            h = st.time_input("Hora")
+            cl = st.text_input("Cliente")
+            if st.button("Registrar Cita"):
+                nueva_c = pd.DataFrame([[str(f), str(h), cl]], columns=["Fecha", "Hora", "Cliente"])
+                conn.update(worksheet="Citas", data=pd.concat([df_c, nueva_c], ignore_index=True))
+                st.success("Cita agendada.")
+                st.rerun()
+    except: st.error("Crea una pestaña llamada 'Citas' con columnas: Fecha, Hora, Cliente.")
 
-elif "👥" in choice:
-    st.title("Nómina")
-    with st.form("p"):
-        em = st.text_input("Empleado"); hrs = st.number_input("Horas"); r = st.number_input("Tarifa")
-        if st.form_submit_button("Registrar"):
-            df_n = conn.read(worksheet="Nomina").astype(str)
-            n_n = pd.DataFrame([[datetime.now().strftime("%Y-%m-%d"), em, str(hrs*r)]], columns=["Fecha", "Empleado", "Total"])
-            conn.update(worksheet="Nomina", data=pd.concat([df_n, n_n], ignore_index=True))
-            st.success("Registrado")
+# --- 4. NÓMINA ---
+elif "Nómina" in choice:
+    st.title("Registro de Nómina")
+    try:
+        df_n = conn.read(worksheet="Nomina", ttl=0).astype(str)
+        st.dataframe(df_n, use_container_width=True)
+        with st.form("nomina"):
+            emp = st.text_input("Nombre del Empleado")
+            pago = st.number_input("Total a Pagar ($)", min_value=0.0)
+            if st.form_submit_button("Registrar Pago"):
+                nueva_n = pd.DataFrame([[datetime.now().strftime("%Y-%m-%d"), emp, str(pago)]], 
+                                      columns=["Fecha", "Empleado", "Total"])
+                conn.update(worksheet="Nomina", data=pd.concat([df_n, nueva_n], ignore_index=True))
+                st.success("Nómina registrada.")
+                st.rerun()
+    except: st.error("Crea una pestaña llamada 'Nomina' con columnas: Fecha, Empleado, Total.")
 
-# --- CATALOGO COMPLETO (RESTAURADO) ---
-elif "🛒" in choice:
-    st.title(t["menu"][4])
+# --- 5. CATÁLOGO COMPLETO ---
+elif "Catálogo" in choice:
+    st.title("Catálogo de Materiales")
+    # Restauradas las 8 categorías que se perdieron
     cat = [
         ("Tile", "https://www.flooranddecor.com/tile", "tile.jpg.png"), 
         ("Stone", "https://www.flooranddecor.com/stone", "stone.jpg.png"), 
@@ -151,12 +125,13 @@ elif "🛒" in choice:
         ("Materials", "https://www.flooranddecor.com/installation-materials", "materials.jpg.jpeg")
     ]
     for i in range(0, len(cat), 2):
-        cs = st.columns(2)
+        cols = st.columns(2)
         for j in range(2):
             if i+j < len(cat):
-                n, l, img = cat[i+j]
-                with cs[j]:
+                nombre, link, img = cat[i+j]
+                with cols[j]:
                     if os.path.exists(img): st.image(img)
-                    st.subheader(n); st.link_button(t["ver_mas"], l)
+                    st.subheader(nombre)
+                    st.link_button("Ver detalles", link)
 
 st.sidebar.caption("©️ 2026 JR CRUZ MASONRY LLC")
