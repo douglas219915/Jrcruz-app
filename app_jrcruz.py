@@ -1,250 +1,241 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import os
+import base64
+from fpdf import FPDF
 
-# ==========================================
-# 1. Configuración y Estilo de la Página
-# ==========================================
+# 1. CONFIGURACIÓN
 st.set_page_config(page_title="JR CRUZ MASONRY LLC", page_icon="🏗️", layout="wide")
 
-# Inicialización de Estados de Sesión (para guardar datos temporalmente)
-if 'calculos_areas' not in st.session_state:
-    st.session_state.calculos_areas = []
-if 'registros_nomina' not in st.session_state:
-    # Formato: {'Trabajador': {'Horas': 0, 'Pago_Hora': 0, 'Total': 0}}
-    st.session_state.registros_nomina = {}
-
-# Estilo CSS Personalizado (Azul Marino y Profesional)
-st.markdown("""
-    <style>
-    .stApp { background-color: #f8f9fa; }
-    h1, h2, h3 { color: #1A4F8B; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
-    .stButton>button { 
-        background-color: #1A4F8B; color: white; border-radius: 10px; 
-        font-weight: bold; width: 100%; border: 2px solid #000000;
-        transition: all 0.3s;
-    }
-    .stButton>button:hover { background-color: #0d3a6b; color: #f8f9fa; }
-    .metric-box {
-        background-color: white; padding: 20px; border-radius: 15px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-left: 8px solid #1A4F8B;
-        margin-bottom: 20px;
-    }
-    .stTable { background-color: white; border-radius: 10px; overflow: hidden; }
-    .catalogo-link {
-        display: inline-block; padding: 15px 25px; background-color: white;
-        color: #1A4F8B; text-decoration: none; border-radius: 10px;
-        border: 2px solid #1A4F8B; font-weight: bold; margin: 10px;
-        transition: all 0.3s;
-    }
-    .catalogo-link:hover { background-color: #1A4F8B; color: white; }
-    </style>
-    """, unsafe_allow_html=True)
-
-# ==========================================
-# 2. Encabezado con Logo y Título
-# ==========================================
-header_col1, header_col2 = st.columns([1, 4])
-with header_col1:
+def get_base64(file):
     try:
-        # Asegúrate de que este nombre sea exacto
-        st.image("5104.jpg", width=180, output_format="JPEG")
-    except:
-        st.write("🏗️ [Logo]")
-with header_col2:
-    st.markdown("<h1>JR CRUZ MASONRY LLC</h1>", unsafe_allow_html=True)
-    st.markdown("### *Renovations and new construction: Floors and Bathrooms*")
+        with open(file, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    except: return None
 
-st.markdown("---")
+# --- ESTILOS VISUALES ---
+logo_b64 = get_base64("5104.jpg")
+st.markdown(f"""
+    <style>
+    [data-testid="stAppViewContainer"] {{
+        background-image: linear-gradient(rgba(255,255,255,0.94), rgba(255,255,255,0.94))
+        {f', url("data:image/jpg;base64,{logo_b64}")' if logo_b64 else ""};
+        background-size: 400px; background-repeat: no-repeat; background-attachment: fixed; background-position: center;
+    }}
+    .stButton>button {{ width: 100%; background-color: #1A4F8B; color: white; border-radius: 8px; font-weight: bold; height: 45px; }}
+    h1, h2, h3 {{ color: #1A4F8B; }}
+    .sqft-box {{
+        background-color: #1A4F8B; color: white; padding: 15px; border-radius: 10px;
+        text-align: center; margin-bottom: 20px; font-size: 20px; font-weight: bold;
+    }}
+    [data-testid="stImage"] img {{
+        width: 100% !important;
+        height: 280px !important;
+        object-fit: cover !important;
+        border-radius: 12px;
+    }}
+    </style>
+""", unsafe_allow_html=True)
 
-# ==========================================
-# 3. Panel de Control / Menú Lateral
-# ==========================================
-st.sidebar.markdown("# Panel de Control")
-# Solo español por ahora para simplificar y asegurar funcionalidad
-menu_options = ["📊 Calculadora de Áreas", "👥 Nómina Interactiva", "🖼️ Catálogo de Materiales"]
-choice = st.sidebar.radio("Seleccione una herramienta:", menu_options)
+# --- TRADUCCIONES ---
+idioma = st.sidebar.radio("🌐 Language / Idioma", ["Español", "English"])
+texts = {
+    "Español": {
+        "menu": ["📝 Nuevo Estimado", "📋 Historial y Pagos", "📅 Citas", "👥 Nómina", "🛒 Catálogo"],
+        "cliente": "Cliente", "fecha": "Fecha", "desc": "Descripción", "largo": "Largo (ft)", "ancho": "Ancho (ft)",
+        "mano_obra": "Mano de Obra", "costo": "Costo ($)", "item": "Artículo", "dep": "Depósito",
+        "total_c": "Total Contrato", "total_p": "Total Pagado", "balance": "Balance Pendiente",
+        "btn_save": "Guardar Nuevo Registro", "btn_edit": "Actualizar Pagos y Guardar", "btn_pdf": "Descargar Recibo PDF",
+        "ver_mas": "Ver detalles", "m_citas": "Módulo de Citas", "m_nomina": "Módulo de Nómina",
+        "hora": "Hora", "agendar": "Agendar Cita", "empleado": "Empleado", "horas": "Horas Trabajadas",
+        "tarifa": "Tarifa por Hora", "reg_pago": "Registrar Pago", "seleccione": "Seleccione Cliente",
+        "agregar_celda": "+ Agregar Celda de Depósito", "exito": "¡Guardado!", "cambios": "¡Actualizado!",
+        "total_sqft": "Total Pies Cuadrados"
+    },
+    "English": {
+        "menu": ["📝 New Estimate", "📋 History & Payments", "📅 Appointments", "👥 Payroll", "🛒 Catalog"],
+        "cliente": "Client", "fecha": "Date", "desc": "Description", "largo": "Length (ft)", "ancho": "Width (ft)",
+        "mano_obra": "Labor Cost", "costo": "Cost ($)", "item": "Item", "dep": "Deposit",
+        "total_c": "Total Contract", "total_p": "Total Paid", "balance": "Balance Due",
+        "btn_save": "Save New Record", "btn_edit": "Update Payments & Save", "btn_pdf": "Download Receipt PDF",
+        "ver_mas": "View details", "m_citas": "Appointments Module", "m_nomina": "Payroll Module",
+        "hora": "Time", "agendar": "Schedule Appointment", "empleado": "Employee", "horas": "Hours Worked",
+        "tarifa": "Hourly Rate", "reg_pago": "Register Payment", "seleccione": "Select Client",
+        "agregar_celda": "+ Add Deposit Cell", "exito": "Saved!", "cambios": "Updated!",
+        "total_sqft": "Total Square Feet"
+    }
+}
+t = texts[idioma]
+choice = st.sidebar.selectbox("Panel", t["menu"])
 
-# ==========================================
-# 4. Sección 1: Calculadora de Áreas
-# ==========================================
-if choice == "📊 Calculadora de Áreas":
-    st.header("Suma de Áreas de Proyecto")
+# --- MODULO 1: NUEVO ESTIMADO (CON SUMA DE SQFT) ---
+if "📝" in choice:
+    st.title(t["menu"][0])
+    c1, c2 = st.columns(2)
+    cliente = c1.text_input(t["cliente"])
+    fec = c2.date_input(t["fecha"])
     
-    with st.form("calc_form"):
-        st.write("### Añadir nueva área")
-        nombre_area = st.text_input("Nombre de la sección (ej. Baño Principal)", placeholder="Master Bathroom")
-        c1, c2 = st.columns(2)
-        largo = c1.number_input("Largo (ft)", min_value=0.0, step=0.5, format="%.2f")
-        ancho = c2.number_input("Ancho (ft)", min_value=0.0, step=0.5, format="%.2f")
-        submit_calc = st.form_submit_button("Añadir al Total")
-        
-        if submit_calc and largo > 0 and ancho > 0:
-            area_sqft = largo * ancho
-            # Guardar en estado de sesión
-            st.session_state.calculos_areas.append({
-                "Nombre": nombre_area if nombre_area else f"Área {len(st.session_state.calculos_areas)+1}",
-                "SqFt": area_sqft
-            })
-            st.success(f"Área '{nombre_area}' añadida ({area_sqft:.2f} sqft).")
+    st.markdown("### 📏 Areas")
+    if 'rows' not in st.session_state: st.session_state['rows'] = 1
+    
+    total_sqft = 0.0 # Variable para sumar áreas
+    
+    for i in range(st.session_state['rows']):
+        ca1, ca2, ca3 = st.columns([2, 1, 1])
+        ca1.text_input(f"{t['desc']} {i+1}", key=f"n_{i}")
+        l = ca2.number_input(t["largo"], min_value=0.0, key=f"l_{i}")
+        a = ca3.number_input(t["ancho"], min_value=0.0, key=f"a_{i}")
+        total_sqft += (l * a) # Suma el área de esta fila
 
-    # Mostrar Resumen y Total
-    if st.session_state.calculos_areas:
-        st.write("---")
-        st.subheader("Resumen del Proyecto")
-        
-        # Crear DataFrame para visualización
-        df_areas = pd.DataFrame(st.session_state.calculos_areas)
-        st.table(df_areas)
-        
-        # Calcular y Mostrar Total
-        total_sqft = df_areas['SqFt'].sum()
-        
-        st.markdown(f"""
-            <div class="metric-box">
-                <p style="margin: 0; font-size: 1.2em; color: #555;">Pies Cuadrados Totales:</p>
-                <h1 style="margin: 0; color: #1A4F8B;">{total_sqft:.2f} SqFt</h1>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        col_clear1, col_clear2 = st.columns([1, 3])
-        if col_clear1.button("🗑️ Borrar Todo"):
-            st.session_state.calculos_areas = []
+    col_btn_area, col_total_sqft = st.columns([1, 1])
+    with col_btn_area:
+        if st.button("+ Area"): 
+            st.session_state['rows'] += 1
             st.rerun()
-
-# ==========================================
-# 5. Sección 2: Nómina Interactiva (¡NUEVO!)
-# ==========================================
-elif choice == "👥 Nómina Interactiva":
-    st.header("Control de Nómina Semanal")
     
-    # 2.1 Gestión de Trabajadores
-    with st.expander("➕ Gestionar Trabajadores", expanded=False):
-        new_worker = st.text_input("Añadir nuevo trabajador:", placeholder="Nombre")
-        if st.button("Crear Registro"):
-            if new_worker and new_worker not in st.session_state.registros_nomina:
-                # Inicializar registro
-                st.session_state.registros_nomina[new_worker] = {
-                    'Horas': 0.0,
-                    'Pago_Hora': 0.0,
-                    'Total_Debido': 0.0,
-                    'Pagado': 0.0
-                }
-                st.success(f"Trabajador '{new_worker}' registrado.")
+    # Mostrar el total de Pies Cuadrados de forma destacada
+    with col_total_sqft:
+        st.markdown(f"""<div class="sqft-box">{t['total_sqft']}: {total_sqft:,.2f} ft²</div>""", unsafe_allow_html=True)
+    
+    st.markdown("---")
+    st.markdown("### 💰 Costs")
+    mano_obra = st.number_input(t["mano_obra"], min_value=0.0)
+    
+    if 'm_rows' not in st.session_state: st.session_state['m_rows'] = 1
+    total_mat = 0.0
+    for j in range(st.session_state['m_rows']):
+        cm1, cm2 = st.columns([3, 1])
+        cm1.text_input(f"{t['item']} {j+1}", key=f"md_{j}")
+        v_mat = cm2.number_input(f"{t['costo']} {j+1}", min_value=0.0, key=f"mv_{j}")
+        total_mat += v_mat
+    
+    if st.button("+ Item"): 
+        st.session_state['m_rows'] += 1
+        st.rerun()
+
+    st.markdown("---")
+    st.markdown("### 🏦 Payments")
+    if 'dep_rows' not in st.session_state: st.session_state['dep_rows'] = 1
+    lista_deps = []
+    for k in range(st.session_state['dep_rows']):
+        v_dep = st.number_input(f"{t['dep']} {k+1}", min_value=0.0, key=f"dv_{k}")
+        lista_deps.append(v_dep)
+
+    if st.button(t["agregar_celda"]): 
+        st.session_state['dep_rows'] += 1
+        st.rerun()
+
+    total_c = float(mano_obra + total_mat)
+    total_p = float(sum(lista_deps))
+    bal = total_c - total_p
+
+    st.markdown(f"**Total Contract: ${total_c:,.2f} | Balance: ${bal:,.2f}**")
+
+    if st.button(t["btn_save"]):
+        d_str = ";".join(map(str, lista_deps))
+        df_new = pd.DataFrame([[str(fec), cliente, total_c, d_str, total_p, bal, total_sqft]], 
+                             columns=["Fecha", "Cliente", "Total", "Depositos", "Pagado", "Balance", "Total_SqFt"])
+        file = "historial_final.csv"
+        df_new.to_csv(file, mode='a', header=not os.path.exists(file), index=False)
+        st.success(t["exito"])
+
+# --- MODULO 2: HISTORIAL Y PAGOS ---
+elif "📋" in choice:
+    st.title(t["menu"][1])
+    file = "historial_final.csv"
+    if os.path.exists(file):
+        df_h = pd.read_csv(file)
+        st.dataframe(df_h, use_container_width=True)
+        
+        st.markdown("---")
+        sel_c = st.selectbox(t["seleccione"], [""] + list(df_h["Cliente"].unique()))
+        
+        if sel_c != "":
+            idx = df_h[df_h["Cliente"] == sel_c].index[-1]
+            val_total = float(df_h.loc[idx, "Total"])
+            raw_deps = str(df_h.loc[idx, "Depositos"])
+            deps_list = [float(d) for d in raw_deps.split(";") if d and d != 'nan']
+            
+            if 'edit_count' not in st.session_state: st.session_state['edit_count'] = len(deps_list)
+            
+            nuevos_val_deps = []
+            for i in range(st.session_state['edit_count']):
+                d_def = deps_list[i] if i < len(deps_list) else 0.0
+                v = st.number_input(f"{t['dep']} {i+1}", value=float(d_def), key=f"ed_{i}")
+                nuevos_val_deps.append(v)
+            
+            if st.button(t["agregar_celda"]): 
+                st.session_state['edit_count'] += 1
                 st.rerun()
-            elif new_worker in st.session_state.registros_nomina:
-                st.warning("Este trabajador ya está registrado.")
 
-    # 2.2 Panel de Nómina
-    if st.session_state.registros_nomina:
-        st.write("### Actualizar Horas y Pagos")
-        
-        # Seleccionar trabajador para editar
-        selected_worker = st.selectbox("Seleccione un trabajador:", list(st.session_state.registros_nomina.keys()))
-        
-        if selected_worker:
-            worker_data = st.session_state.registros_nomina[selected_worker]
+            n_p = sum(nuevos_val_deps)
+            n_b = val_total - n_p
             
-            with st.form("nomina_update_form"):
-                c1, c2, c3 = st.columns(3)
-                horas = c1.number_input("Horas Trabajadas (Semana)", min_value=0.0, value=worker_data['Horas'], step=1.0)
-                pago_hora = c2.number_input("Pago por Hora ($)", min_value=0.0, value=worker_data['Pago_Hora'], step=1.0)
-                pagado = c3.number_input("Monto Pagado ($)", min_value=0.0, value=worker_data['Pagado'], step=10.0)
-                
-                submit_nomina = st.form_submit_button("Actualizar Nómina")
-                
-                if submit_nomina:
-                    # Calcular nuevos totales
-                    total_debido = horas * pago_hora
-                    saldo = total_debido - pagado
-                    
-                    # Guardar actualizaciones
-                    st.session_state.registros_nomina[selected_worker] = {
-                        'Horas': horas,
-                        'Pago_Hora': pago_hora,
-                        'Total_Debido': total_debido,
-                        'Pagado': pagado
-                    }
-                    st.success(f"Nómina de '{selected_worker}' actualizada.")
-                    st.rerun()
+            if st.button(t["btn_edit"]):
+                df_h["Depositos"] = df_h["Depositos"].astype(object)
+                df_h.at[idx, "Depositos"] = ";".join(map(str, nuevos_val_deps))
+                df_h.at[idx, "Pagado"] = n_p
+                df_h.at[idx, "Balance"] = n_b
+                df_h.to_csv(file, index=False)
+                st.success(t["cambios"])
+                st.rerun()
 
-        st.write("---")
-        st.subheader("Estado de Nómina Semanal")
-        
-        # Crear DataFrame para visualización
-        nomina_data = []
-        total_pago_semana = 0
-        total_pagado_semana = 0
-        
-        for worker, data in st.session_state.registros_nomina.items():
-            total_debido = data['Horas'] * data['Pago_Hora']
-            saldo = total_debido - data['Pagado']
-            
-            total_pago_semana += total_debido
-            total_pagado_semana += data['Pagado']
-            
-            nomina_data.append({
-                "Trabajador": worker,
-                "Horas": data['Horas'],
-                "$/Hora": f"${data['Pago_Hora']:.2f}",
-                "Total Debido": f"${total_debido:.2f}",
-                "Monto Pagado": f"${data['Pagado']:.2f}",
-                "Saldo Restante": f"${saldo:.2f}"
-            })
-            
-        df_nomina = pd.DataFrame(nomina_data)
-        st.table(df_nomina)
-        
-        # Métricas Totales
-        st.markdown(f"""
-            <div class="metric-box">
-                <p style="margin: 0; font-size: 1.2em; color: #555;">Total Debido Semana:</p>
-                <h1 style="margin: 0; color: #1A4F8B;">${total_pago_semana:.2f}</h1>
-                <p style="margin: 5px 0 0; color: #28a745;">Total Pagado: ${total_pagado_semana:.2f}</p>
-                <p style="margin: 0; color: #dc3545; font-weight: bold;">Saldo Pendiente: ${total_pago_semana - total_pagado_semana:.2f}</p>
-            </div>
-            """, unsafe_allow_html=True)
+            if st.button(t["btn_pdf"]):
+                pdf = FPDF()
+                pdf.add_page()
+                if os.path.exists("5104.jpg"): pdf.image("5104.jpg", 10, 8, 30)
+                pdf.set_font("Arial", "B", 16); pdf.cell(0, 10, "JR CRUZ MASONRY LLC", 0, 1, "C"); pdf.ln(10)
+                pdf.set_font("Arial", "B", 12)
+                pdf.cell(0, 10, f"CLIENTE: {sel_c}", 0, 1)
+                pdf.cell(0, 10, f"TOTAL: ${val_total:,.2f}", 0, 1)
+                for i, d in enumerate(nuevos_val_deps):
+                    pdf.cell(0, 10, f"DEPOSITO {i+1}: ${d:,.2f}", 0, 1)
+                pdf.cell(0, 10, f"BALANCE: ${n_b:,.2f}", 0, 1)
+                name_pdf = f"Recibo_{sel_c}.pdf"
+                pdf.output(name_pdf)
+                with open(name_pdf, "rb") as f: st.download_button(f"📩 {t['btn_pdf']}", f, file_name=name_pdf)
 
-        if st.button("🗑️ Reiniciar Nómina"):
-            st.session_state.registros_nomina = {}
-            st.rerun()
-    else:
-        st.info("No hay trabajadores registrados. Use el botón superior para empezar.")
+# --- MODULOS: CITAS Y NÓMINA ---
+elif "📅" in choice:
+    st.title(t["m_citas"])
+    with st.form("c"):
+        f = st.date_input(t["fecha"]); hr = st.time_input(t["hora"]); cl = st.text_input(t["cliente"])
+        if st.form_submit_button(t["agendar"]):
+            pd.DataFrame([[str(f), str(hr), cl]], columns=["Fecha", "Hora", "Cliente"]).to_csv("citas.csv", mode='a', header=not os.path.exists("citas.csv"), index=False)
+            st.success(t["exito"])
+    if os.path.exists("citas.csv"): st.dataframe(pd.read_csv("citas.csv"))
 
-# ==========================================
-# 6. Sección 3: Catálogo (¡NUEVO!)
-# ==========================================
-elif choice == "🖼️ Catálogo de Materiales":
-    st.header("Catálogo de Materiales y Proveedores")
-    
-    st.write("### Enlaces Rápidos a Proveedores:")
-    st.markdown("Acceda directamente a las páginas de cotización de material de los principales proveedores.")
-    
-    # 3.1 Botón Directo a Floor & Decor
-    st.markdown("""
-        <a href="https://www.flooranddecor.com/" target="_blank" class="catalogo-link">
-            🛒 Cotizar en Floor & Decor (Directo)
-        </a>
-    """, unsafe_allow_html=True)
-    
-    # 3.2 Otros proveedores
-    with st.expander("Ver otros proveedores"):
-        st.markdown("""
-            <a href="https://www.homedepot.com/b/Flooring/N-5yc1vZar4b" target="_blank" class="catalogo-link">
-                Home Depot Flooring
-            </a>
-            <a href="https://www.lowes.com/c/Flooring" target="_blank" class="catalogo-link">
-                Lowe's Flooring
-            </a>
-        """, unsafe_allow_html=True)
-    
-    st.write("---")
-    st.subheader("Galería de Materiales Sugeridos")
-    st.info("Aquí podrá subir fotos de materiales o trabajos terminados en el futuro.")
-    # (En el futuro, podrías añadir st.image() para una galería real)
+elif "👥" in choice:
+    st.title(t["m_nomina"])
+    with st.form("p"):
+        em = st.text_input(t["empleado"]); hrs = st.number_input(t["horas"]); r = st.number_input(t["tarifa"])
+        if st.form_submit_button(t["reg_pago"]):
+            tot = hrs * r
+            pd.DataFrame([[datetime.now().strftime("%Y-%m-%d"), em, tot]], columns=["Fecha", "Empleado", "Total"]).to_csv("payroll.csv", mode='a', header=not os.path.exists("payroll.csv"), index=False)
+            st.success(f"{t['exito']} ${tot}")
+    if os.path.exists("payroll.csv"): st.dataframe(pd.read_csv("payroll.csv"))
 
-# ==========================================
-# 7. Pie de Página
-# ==========================================
-st.markdown("---")
-st.caption(f"©️ {datetime.now().year} JR CRUZ MASONRY LLC | Herramienta de Gestión Profesional V2.1")
+# --- CATALOGO ---
+elif "🛒" in choice:
+    st.title(t["menu"][4])
+    cat = [
+        ("Tile", "https://www.flooranddecor.com/tile", "tile.jpg.png"), 
+        ("Stone", "https://www.flooranddecor.com/stone", "stone.jpg.png"), 
+        ("Wood", "https://www.flooranddecor.com/hardwood", "wood.jpg.png"), 
+        ("Laminate", "https://www.flooranddecor.com/laminate", "laminate.jpg.JPG"),
+        ("Vinyl", "https://www.flooranddecor.com/vinyl", "vinyl.jpg.JPG"),
+        ("Decoratives", "https://www.flooranddecor.com/decoratives", "decoratives.jpg.jpeg"),
+        ("Fixtures", "https://www.flooranddecor.com/bathroom-fixtures", "fixtures.jpg.png"),
+        ("Materials", "https://www.flooranddecor.com/installation-materials", "materials.jpg.jpeg")
+    ]
+    for i in range(0, len(cat), 2):
+        cs = st.columns(2)
+        for j in range(2):
+            if i+j < len(cat):
+                n, l, img = cat[i+j]
+                with cs[j]:
+                    if os.path.exists(img): st.image(img)
+                    st.subheader(n); st.link_button(t["ver_mas"], l)
+
+st.sidebar.caption("©️ 2026 JR CRUZ MASONRY LLC")
